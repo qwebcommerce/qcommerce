@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import BrandLogo from "@/components/BrandLogo";
 import { usePreferences } from "@/lib/preferences";
 import { loc, theme } from "@/theme.config";
 
@@ -10,7 +11,6 @@ export default function LoadingScreen() {
   const { locale } = usePreferences();
   const [exiting, setExiting] = useState(false);
   const [hidden, setHidden] = useState(dismissed);
-  const letters = theme.brand.name.split("");
 
   useEffect(() => {
     if (dismissed) return;
@@ -33,7 +33,7 @@ export default function LoadingScreen() {
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        backgroundColor: "var(--warm-white)",
+        backgroundColor: "#0D0D0D",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -42,35 +42,18 @@ export default function LoadingScreen() {
         transition: "transform 0.75s cubic-bezier(0.76, 0, 0.24, 1)",
       }}
     >
-      <div style={{ display: "flex", overflow: "visible" }}>
-        {letters.map((letter, i) => (
-          <div key={`${letter}-${i}`} style={{ overflow: "hidden", lineHeight: 1 }}>
-            <span
-              style={{
-                display: "block",
-                color: "var(--black)",
-                fontSize: "clamp(2.8rem, 8vw, 5.5rem)",
-                fontWeight: 900,
-                letterSpacing: "0.08em",
-                lineHeight: 1,
-                animation: "letterIn 0.65s cubic-bezier(0.34, 1.2, 0.64, 1) both",
-                animationDelay: `${0.1 + i * 0.07}s`,
-              }}
-            >
-              {letter}
-            </span>
-          </div>
-        ))}
+      <div style={{ animation: "letterIn 0.7s cubic-bezier(0.34, 1.2, 0.64, 1) both" }}>
+        <BrandLogo size="splash" />
       </div>
       <p
         style={{
-          color: "var(--muted)",
+          color: "rgba(255,255,255,0.45)",
           fontSize: "0.6rem",
           letterSpacing: "0.5em",
           textTransform: "uppercase",
-          marginTop: "1rem",
+          marginTop: "1.25rem",
           animation: "letterIn 0.6s ease both",
-          animationDelay: "0.85s",
+          animationDelay: "0.35s",
         }}
       >
         {loc(theme.brand.tagline, locale)}

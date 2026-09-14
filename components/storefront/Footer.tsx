@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import BrandLogo from "@/components/BrandLogo";
 import { usePreferences } from "@/lib/preferences";
 import { loc, theme } from "@/theme.config";
 
@@ -42,8 +43,8 @@ export default function Footer() {
       <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "5rem 2rem 3rem" }}>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-16">
           <div>
-            <Link href="/" style={{ color: "#fff", fontSize: "1.5rem", fontWeight: 900, letterSpacing: "0.28em", textDecoration: "none", display: "block", marginBottom: "1.5rem" }}>
-              <span dir="ltr">{theme.brand.name}</span>
+            <Link href="/" aria-label={theme.brand.name} style={{ display: "inline-block", marginBottom: "1.5rem" }}>
+              <BrandLogo size="footer" />
             </Link>
             <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "0.83rem", lineHeight: 1.8, marginBottom: "2rem" }}>
               {loc(theme.brand.description, locale)}

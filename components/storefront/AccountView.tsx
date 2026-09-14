@@ -1,55 +1,130 @@
 "use client";
 
 import Link from "next/link";
-import { logoutCustomerAction } from "@/lib/actions";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import StatusBadge from "@/components/admin/StatusBadge";
+import { updateCustomerProfileAction } from "@/lib/actions";
 import { formatDate, formatQar } from "@/lib/format";
 import { usePreferences } from "@/lib/preferences";
+import { useToast } from "@/lib/toast";
 import type { Order } from "@/types";
 
 export default function AccountView({
-  name,
+  customer,
   orders,
 }: {
-  name: string;
+  customer: { fullName: string; email: string; phone: string };
   orders: Order[];
 }) {
-  const { t } = usePreferences();
+  const { t, locale } = usePreferences();
+  const toast = useToast();
+  const router = useRouter();
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
+
+  const pendingOrders = orders.filter((order) => order.status === "pending" || order.status === "processing").length;
+  const spent = orders.filter((order) => order.status !== "cancelled").reduce((sum, order) => sum + order.total, 0);
+
   return (
-    <section className="page-section">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", flexWrap: "wrap", gap: "1rem" }}>
-        <h1 className="section-title">{t("myAccount")}</h1>
-        <form action={logoutCustomerAction}>
-          <button className="btn-outline-black">{t("logOut")}</button>
-        </form>
+    <div>
+      <div className="admin-page-head">
+        <div>
+          <p className="admin-kicker">{t("account")}</p>
+          <h1 className="admin-title">{t("dashboard")}</h1>
+        </div>
+        <p className="admin-updated">{t("hello", { name: customer.fullName })}</p>
       </div>
-      <p style={{ marginBottom: "2rem" }}>{t("hello", { name })}</p>
-      <h2 style={{ fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", marginBottom: "1rem" }}>{t("orderHistory")}</h2>
-      {orders.length === 0 ? (
-        <p style={{ color: "var(--muted)" }}>{t("noOrders")}</p>
-      ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.85rem" }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid var(--sand)", textAlign: "start" }}>
-              <th style={{ padding: "0.75rem 0" }}>{t("order")}</th>
-              <th>{t("date")}</th>
-              <th>{t("status")}</th>
-              <th>{t("total")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => (
-              <tr key={order.id} style={{ borderBottom: "1px solid var(--sand)" }}>
-                <td style={{ padding: "0.75rem 0" }}>
-                  <Link href={`/account/orders/${order.id}`}>{order.orderNumber}</Link>
-                </td>
-                <td>{formatDate(order.createdAt)}</td>
-                <td style={{ textTransform: "capitalize" }}>{order.status}</td>
-                <td>{formatQar(order.total)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </section>
+
+      <div className="admin-stat-grid account-stat-grid">
+        <article className="admin-stat">
+          <div className="admin-stat__top">
+            <p>{t("ordersNav")}</p>
+          </div>
+          <strong>{orders.length}</strong>
+          <span>{t("pendingCount", { count: pendingOrders })}</span>
+        </article>
+        <article className="admin-stat">
+          <div className="admin-stat__top">
+            <p>{t("pending")}</p>
+          </div>
+          <strong>{pendingOrders}</strong>
+          <span>{t("orderStatus")}</span>
+        </article>
+        <article className="admin-stat">
+          <div className="admin-stat__top">
+            <p>{t("spent")}</p>
+          </div>
+          <strong>{formatQar(spent)}</strong>
+          <span>{t("orderHistory")}</span>
+        </article>
+      </div>
+
+      <div className="admin-split">
+        <section className="admin-panel" id="orders">
+          <div className="admin-panel__head">
+            <h2>{t("orderHistory")}</h2>
+          </div>
+          {orders.length === 0 ? (
+            <p className="admin-empty">{t("noOrders")}</p>
+          ) : (
+            <div className="admin-order-list">
+              {orders.map((order) => (
+                <Link key={order.id} href={`/account/orders/${order.id}`} className="admin-order-row">
+                  <div>
+                    <strong>{order.orderNumber}</strong>
+                    <span>{formatDate(order.createdAt, locale)}</span>
+                  </div>
+                  <StatusBadge status={order.status} />
+                  <em>{order.items.length} {t("items")}</em>
+                  <b>{formatQar(order.total)}</b>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="admin-panel" id="profile">
+          <div className="admin-panel__head">
+            <h2>{t("yourProfile")}</h2>
+          </div>
+          <form
+            className="account-profile"
+            action={async (formData) => {
+              setPending(true);
+              setError("");
+              const result = await updateCustomerProfileAction(formData);
+              setPending(false);
+              if (result?.error) {
+                setError(result.error);
+                toast.error(t("toastError"), result.error);
+                return;
+              }
+              toast.success(t("toastProfileSaved"));
+              router.refresh();
+            }}
+          >
+            <label>
+              <span>{t("fullName")}</span>
+              <input name="fullName" required defaultValue={customer.fullName} className="admin-input" />
+            </label>
+            <label>
+              <span>{t("email")}</span>
+              <input value={customer.email} readOnly className="admin-input" />
+            </label>
+            <label>
+              <span>{t("phone")}</span>
+              <input name="phone" defaultValue={customer.phone} placeholder={t("phoneOptional")} className="admin-input" />
+            </label>
+            {error ? <p className="account-profile__error">{error}</p> : null}
+            <div className="admin-form-actions">
+              <button className="btn-gold" disabled={pending} type="submit">
+                {pending ? t("saving") : t("saveProfile")}
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </div>
   );
 }

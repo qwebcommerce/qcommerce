@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { subscribeNewsletterAction } from "@/lib/actions";
 import { usePreferences } from "@/lib/preferences";
+import { useToast } from "@/lib/toast";
 
 export default function Newsletter() {
   const { t } = usePreferences();
+  const toast = useToast();
   const [done, setDone] = useState(false);
 
   return (
@@ -26,7 +28,12 @@ export default function Newsletter() {
           <form
             action={async (formData) => {
               const result = await subscribeNewsletterAction(formData);
-              if (result?.ok) setDone(true);
+              if (result?.ok) {
+                setDone(true);
+                toast.success(t("newsletterSuccess"));
+              } else if (result?.error) {
+                toast.error(t("toastError"), result.error);
+              }
             }}
             style={{ maxWidth: "440px", margin: "0 auto" }}
           >

@@ -71,6 +71,12 @@ export async function getCustomerSession(): Promise<CustomerSession | null> {
   }
 }
 
+export function safeNextPath(value: string | null | undefined, fallback = "/account") {
+  const next = (value ?? "").trim();
+  if (!next.startsWith("/") || next.startsWith("//") || next.includes("://")) return fallback;
+  return next;
+}
+
 export async function authenticateCustomer(email: string, password: string): Promise<Customer> {
   const customer = await getCustomerByEmail(email);
   if (!customer || customer.passwordHash !== hashPassword(password)) {

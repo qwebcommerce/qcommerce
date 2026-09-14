@@ -27,7 +27,6 @@ function applyDom(locale: Locale, theme: ThemeMode) {
   document.documentElement.lang = locale;
   document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
   document.documentElement.dataset.theme = theme;
-  document.documentElement.classList.toggle("dark", theme === "dark");
 }
 
 const listeners = new Set<() => void>();
@@ -69,7 +68,7 @@ function subscribe(listener: () => void) {
   return () => listeners.delete(listener);
 }
 
-export const PREFERENCE_BOOTSTRAP = `(function(){try{var l=localStorage.getItem("qc_locale")||"${defaultLocale}";var t=localStorage.getItem("qc_theme")||"${defaultThemeMode}";var d=document.documentElement;d.lang=l;d.dir=l==="ar"?"rtl":"ltr";d.dataset.theme=t;d.classList.toggle("dark",t==="dark");}catch(e){}})();`;
+export const PREFERENCE_BOOTSTRAP = `(function(){try{var l=localStorage.getItem("qc_locale")||"${defaultLocale}";var t=localStorage.getItem("qc_theme")||"${defaultThemeMode}";var d=document.documentElement;d.lang=l;d.dir=l==="ar"?"rtl":"ltr";d.dataset.theme=t;}catch(e){}})();`;
 
 export function PreferencesProvider({
   children,

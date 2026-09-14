@@ -1,8 +1,8 @@
-import { isSupabaseConfigured } from "@/lib/supabase/env";
-import * as fileStore from "@/lib/db/file-store";
+import "server-only";
 import * as supabaseStore from "@/lib/db/supabase-store";
 import type {
   Category,
+  CategoryInput,
   Customer,
   CustomerInput,
   DashboardStats,
@@ -13,92 +13,112 @@ import type {
   Product,
   ProductFilters,
   ProductInput,
+  StoreSettings,
 } from "@/types";
 
-function store() {
-  return isSupabaseConfigured() ? supabaseStore : fileStore;
-}
-
 export async function listProducts(filters?: ProductFilters): Promise<Product[]> {
-  return store().listProducts(filters);
+  return supabaseStore.listProducts(filters);
 }
 
 export async function listAllProducts(): Promise<Product[]> {
-  return store().listAllProducts();
+  return supabaseStore.listAllProducts();
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
-  return store().getProductBySlug(slug);
+  return supabaseStore.getProductBySlug(slug);
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
-  return store().getProductById(id);
+  return supabaseStore.getProductById(id);
 }
 
 export async function createProduct(input: ProductInput): Promise<Product> {
-  return store().createProduct(input);
+  return supabaseStore.createProduct(input);
 }
 
 export async function updateProduct(id: string, input: Partial<ProductInput>): Promise<Product> {
-  return store().updateProduct(id, input);
+  return supabaseStore.updateProduct(id, input);
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  return store().deleteProduct(id);
+  return supabaseStore.deleteProduct(id);
 }
 
 export async function listCategories(): Promise<Category[]> {
-  return store().listCategories();
+  return supabaseStore.listCategories();
 }
 
-export async function upsertCategory(input: Omit<Category, "id"> & { id?: string }): Promise<Category> {
-  return store().upsertCategory(input);
+export async function getCategoryById(id: string): Promise<Category | null> {
+  return supabaseStore.getCategoryById(id);
+}
+
+export async function upsertCategory(input: CategoryInput): Promise<Category> {
+  return supabaseStore.upsertCategory(input);
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  return store().deleteCategory(id);
+  return supabaseStore.deleteCategory(id);
 }
 
 export async function listOrders(): Promise<Order[]> {
-  return store().listOrders();
+  return supabaseStore.listOrders();
 }
 
 export async function getOrderById(id: string): Promise<Order | null> {
-  return store().getOrderById(id);
+  return supabaseStore.getOrderById(id);
 }
 
 export async function listOrdersByCustomer(customerId: string, email?: string): Promise<Order[]> {
-  return store().listOrdersByCustomer(customerId, email);
+  return supabaseStore.listOrdersByCustomer(customerId, email);
 }
 
 export async function createOrder(input: OrderInput): Promise<Order> {
-  return store().createOrder(input);
+  return supabaseStore.createOrder(input);
 }
 
 export async function updateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
-  return store().updateOrderStatus(id, status);
+  return supabaseStore.updateOrderStatus(id, status);
 }
 
 export async function listCustomers(): Promise<Customer[]> {
-  return store().listCustomers();
+  return supabaseStore.listCustomers();
 }
 
 export async function getCustomerById(id: string): Promise<Customer | null> {
-  return store().getCustomerById(id);
+  return supabaseStore.getCustomerById(id);
 }
 
 export async function getCustomerByEmail(email: string): Promise<Customer | null> {
-  return store().getCustomerByEmail(email);
+  return supabaseStore.getCustomerByEmail(email);
 }
 
 export async function createCustomer(input: CustomerInput): Promise<Customer> {
-  return store().createCustomer(input);
+  return supabaseStore.createCustomer(input);
+}
+
+export async function updateCustomer(
+  id: string,
+  input: { fullName: string; phone: string },
+): Promise<Customer> {
+  return supabaseStore.updateCustomer(id, input);
 }
 
 export async function addNewsletter(email: string): Promise<NewsletterEntry> {
-  return store().addNewsletter(email);
+  return supabaseStore.addNewsletter(email);
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  return store().getDashboardStats();
+  return supabaseStore.getDashboardStats();
+}
+
+export async function getStoreSettings(): Promise<StoreSettings> {
+  return supabaseStore.getStoreSettings();
+}
+
+export async function updateStoreSettings(input: StoreSettings): Promise<StoreSettings> {
+  return supabaseStore.updateStoreSettings(input);
+}
+
+export async function emailHasUsedPromo(email: string, code: string): Promise<boolean> {
+  return supabaseStore.emailHasUsedPromo(email, code);
 }

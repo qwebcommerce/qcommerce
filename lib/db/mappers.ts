@@ -1,10 +1,12 @@
-import type { Category, Customer, Order, OrderItem, Product, ProductBadge } from "@/types";
+import type { Category, Customer, Order, OrderItem, Product, ProductBadge, ProductVariant } from "@/types";
 
 type ProductRow = {
   id: string;
   name: string;
+  name_ar: string | null;
   slug: string;
   description: string | null;
+  description_ar: string | null;
   category: string;
   category_slug: string;
   price: number;
@@ -15,16 +17,21 @@ type ProductRow = {
   sizes: string[];
   colors: string[];
   stock: number;
+  has_variants?: boolean | null;
+  variants?: unknown;
   status: "active" | "draft";
   created_at: string;
 };
 
 type CategoryRow = {
   id: string;
+  parent_id: string | null;
   name: string;
+  name_ar: string | null;
   slug: string;
   subtitle: string | null;
-  image: string;
+  subtitle_ar: string | null;
+  image: string | null;
   sort_order: number;
 };
 
@@ -54,12 +61,36 @@ type CustomerRow = {
   created_at: string;
 };
 
+function mapVariant(raw: Record<string, unknown>, fallbackId: string): ProductVariant {
+  const compare = raw.compareAtPrice ?? raw.compare_at_price;
+  return {
+    id: String(raw.id || fallbackId),
+    size: String(raw.size ?? ""),
+    color: String(raw.color ?? ""),
+    sku: String(raw.sku ?? ""),
+    price: Number(raw.price ?? 0),
+    compareAtPrice: compare == null || compare === "" ? null : Number(compare),
+    stock: Number(raw.stock ?? 0),
+    image: String(raw.image ?? ""),
+  };
+}
+
+export function mapVariants(raw: unknown): ProductVariant[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    .map((item, index) => mapVariant(item, `var_${index}`));
+}
+
 export function mapProduct(row: ProductRow): Product {
+  const variants = mapVariants(row.variants);
   return {
     id: row.id,
     name: row.name,
+    nameAr: row.name_ar ?? "",
     slug: row.slug,
     description: row.description ?? "",
+    descriptionAr: row.description_ar ?? "",
     category: row.category,
     categorySlug: row.category_slug,
     price: Number(row.price),
@@ -70,6 +101,8 @@ export function mapProduct(row: ProductRow): Product {
     sizes: row.sizes ?? [],
     colors: row.colors ?? [],
     stock: row.stock,
+    hasVariants: Boolean(row.has_variants) || variants.length > 0,
+    variants,
     status: row.status,
     createdAt: row.created_at,
   };
@@ -78,15 +111,20 @@ export function mapProduct(row: ProductRow): Product {
 export function mapCategory(row: CategoryRow): Category {
   return {
     id: row.id,
+    parentId: row.parent_id ?? null,
     name: row.name,
+    nameAr: row.name_ar ?? "",
     slug: row.slug,
     subtitle: row.subtitle ?? "",
-    image: row.image,
+    subtitleAr: row.subtitle_ar ?? "",
+    image: row.image ?? "",
     sortOrder: row.sort_order,
   };
 }
 
 export function mapOrder(row: OrderRow): Order {
+  const address = row.shipping_address ?? { line1: "", city: "", country: "" };
+  const discount = Number(address.discount ?? 0);
   return {
     id: row.id,
     orderNumber: row.order_number,
@@ -96,9 +134,12 @@ export function mapOrder(row: OrderRow): Order {
     status: row.status,
     items: row.items ?? [],
     subtotal: Number(row.subtotal),
+    discount: Number.isFinite(discount) ? discount : 0,
     shipping: Number(row.shipping),
     total: Number(row.total),
-    shippingAddress: row.shipping_address,
+    promoCode: String(address.promoCode ?? ""),
+    shippingAddress: address,
+    paymentMethod: address.paymentMethod === "cod" ? "cod" : "cod",
     notes: row.notes ?? "",
     createdAt: row.created_at,
   };
@@ -119,8 +160,10 @@ export function mapCustomer(row: CustomerRow): Customer {
 export function productToRow(product: Partial<Product>) {
   return {
     name: product.name,
+    name_ar: product.nameAr ?? "",
     slug: product.slug,
     description: product.description,
+    description_ar: product.descriptionAr ?? "",
     category: product.category,
     category_slug: product.categorySlug,
     price: product.price,
@@ -131,6 +174,8 @@ export function productToRow(product: Partial<Product>) {
     sizes: product.sizes,
     colors: product.colors,
     stock: product.stock,
+    has_variants: product.hasVariants ?? false,
+    variants: product.variants ?? [],
     status: product.status,
   };
 }

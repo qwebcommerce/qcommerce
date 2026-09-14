@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { Geist, Geist_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
 import { PreferencesProvider, PREFERENCE_BOOTSTRAP } from "@/lib/preferences";
+import { ToastProvider } from "@/lib/toast";
 import { defaultLocale, defaultThemeMode, theme, themeCss, type Locale } from "@/theme.config";
 import "./globals.css";
 
@@ -27,6 +28,7 @@ export const metadata: Metadata = {
     template: `%s · ${theme.brand.name}`,
   },
   description: theme.brand.description.en,
+  icons: { icon: "/logo.png" },
 };
 
 export default async function RootLayout({
@@ -44,6 +46,7 @@ export default async function RootLayout({
       dir={locale === "ar" ? "rtl" : "ltr"}
       data-theme={colorTheme}
       className={`${geistSans.variable} ${geistMono.variable} ${arabic.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <head>
         <style dangerouslySetInnerHTML={{ __html: themeCss() }} />
@@ -51,7 +54,7 @@ export default async function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         <PreferencesProvider initialLocale={locale} initialTheme={colorTheme}>
-          {children}
+          <ToastProvider>{children}</ToastProvider>
         </PreferencesProvider>
       </body>
     </html>

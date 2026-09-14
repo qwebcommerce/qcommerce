@@ -1,13 +1,15 @@
 "use client";
 
+import { useCommerceSettings } from "@/lib/commerce-settings";
 import { usePreferences } from "@/lib/preferences";
 import { theme } from "@/theme.config";
 
 export default function TrustBadges() {
   const { t } = usePreferences();
+  const { freeShippingFrom, returnDays } = useCommerceSettings();
   const badges = [
-    { title: t("trustShipping"), sub: t("trustShippingSub", { currency: theme.commerce.currency, amount: theme.commerce.freeShippingFrom }) },
-    { title: t("trustReturns"), sub: t("trustReturnsSub") },
+    { title: t("trustShipping"), sub: t("trustShippingSub", { currency: theme.commerce.currency, amount: freeShippingFrom }) },
+    { title: t("trustReturns"), sub: t("trustReturnsSub", { days: returnDays }) },
     { title: t("trustPayment"), sub: t("trustPaymentSub") },
     { title: t("trustQuality"), sub: t("trustQualitySub") },
   ];

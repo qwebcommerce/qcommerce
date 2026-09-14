@@ -33,12 +33,24 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
           </div>
         ))}
         <p style={{ display: "flex", justifyContent: "space-between", marginTop: "1rem" }}><span>Shipping</span><span>{formatQar(order.shipping)}</span></p>
+        {order.discount > 0 ? (
+          <p style={{ display: "flex", justifyContent: "space-between" }}>
+            <span>Discount{order.promoCode ? ` · ${order.promoCode}` : ""}</span>
+            <span>−{formatQar(order.discount)}</span>
+          </p>
+        ) : null}
         <p style={{ display: "flex", justifyContent: "space-between", fontWeight: 800 }}><span>Total</span><span>{formatQar(order.total)}</span></p>
       </section>
       <section style={{ background: "var(--surface)", border: "1px solid var(--sand)", padding: "1.25rem" }}>
         <h2 style={{ fontWeight: 800, marginBottom: "0.75rem" }}>Customer</h2>
         <p>{order.customerName}</p>
         <p style={{ color: "var(--muted)" }}>{order.email}</p>
+        <p style={{ color: "var(--muted)", marginTop: "0.35rem" }}>
+          {order.customerId ? "Account order" : "Guest checkout"}
+        </p>
+        {order.shippingAddress.phone ? (
+          <p style={{ marginTop: "0.75rem" }}>{order.shippingAddress.phone}</p>
+        ) : null}
         <p style={{ marginTop: "0.75rem" }}>{order.shippingAddress.line1}</p>
         <p>{order.shippingAddress.city}, {order.shippingAddress.country}</p>
         {order.notes && <p style={{ marginTop: "0.75rem" }}>Note: {order.notes}</p>}

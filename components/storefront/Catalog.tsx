@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import ProductCard from "@/components/storefront/ProductCard";
-import { categoryLabel } from "@/lib/i18n";
+import { nestCategories, localizedCategoryName } from "@/lib/categories";
 import { usePreferences } from "@/lib/preferences";
 import type { Category, Product } from "@/types";
 
 export default function Catalog({
-  title,
+  title: _title,
   products,
   categories,
   activeSlug,
@@ -20,11 +20,13 @@ export default function Catalog({
   sort?: string;
 }) {
   const { t, locale } = usePreferences();
+  const tree = nestCategories(categories);
+  const active = categories.find((category) => category.slug === activeSlug);
   return (
     <section className="page-section" style={{ maxWidth: 1400 }}>
       <span className="section-eyebrow">{t("collections")}</span>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "1rem", flexWrap: "wrap", marginBottom: "2.5rem" }}>
-        <h1 className="section-title">{activeSlug ? categoryLabel(locale, activeSlug, title) : t("allProducts")}</h1>
+        <h1 className="section-title">{active ? localizedCategoryName(active, locale) : t("allProducts")}</h1>
         <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>{t("productsCount", { count: products.length })}</p>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "2.5rem" }} className="max-md:grid-cols-1">
@@ -32,10 +34,26 @@ export default function Catalog({
           <p className="admin-label">{t("categories")}</p>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem" }}>
             <Link href="/shop" style={{ color: !activeSlug ? "var(--gold)" : "var(--black)", textDecoration: "none", fontSize: "0.9rem" }}>{t("all")}</Link>
-            {categories.map((cat) => (
-              <Link key={cat.id} href={`/shop/${cat.slug}`} style={{ color: activeSlug === cat.slug ? "var(--gold)" : "var(--black)", textDecoration: "none", fontSize: "0.9rem" }}>
-                {categoryLabel(locale, cat.slug, cat.name)}
-              </Link>
+            {tree.map((cat) => (
+              <div key={cat.id} style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+                <Link href={`/shop/${cat.slug}`} style={{ color: activeSlug === cat.slug ? "var(--gold)" : "var(--black)", textDecoration: "none", fontSize: "0.9rem" }}>
+                  {localizedCategoryName(cat, locale)}
+                </Link>
+                {cat.children.map((child) => (
+                  <Link
+                    key={child.id}
+                    href={`/shop/${child.slug}`}
+                    style={{
+                      color: activeSlug === child.slug ? "var(--gold)" : "var(--muted)",
+                      textDecoration: "none",
+                      fontSize: "0.82rem",
+                      paddingInlineStart: "0.9rem",
+                    }}
+                  >
+                    {localizedCategoryName(child, locale)}
+                  </Link>
+                ))}
+              </div>
             ))}
           </div>
         </aside>

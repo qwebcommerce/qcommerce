@@ -58,7 +58,7 @@ export const theme = {
 
   commerce: {
     currency: "QAR",
-    freeShippingFrom: 200,
+    freeShippingFrom: 500,
     shippingFee: 25,
     promoCode: "VB20",
     promoPercent: 20,

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { newId } from "@/lib/format";
 import type { CartLine, Product } from "@/types";
 
@@ -24,6 +24,8 @@ type CartState = {
 type WishlistState = {
   ids: string[];
   toggle: (productId: string) => void;
+  remove: (productId: string) => void;
+  clear: () => void;
   has: (productId: string) => boolean;
 };
 
@@ -75,12 +77,23 @@ export function StoreProviders({ children }: { children: React.ReactNode }) {
     [searchOpen, cartOpen],
   );
 
-  const add = useCallback((product: Product, extras?: { size?: string; color?: string; quantity?: number }) => {
+  const add = useCallback((product: Product, extras?: { size?: string; color?: string; quantity?: number; variantId?: string }) => {
     const size = extras?.size;
     const color = extras?.color;
     const quantity = extras?.quantity ?? 1;
+    const variant =
+      product.hasVariants
+        ? product.variants.find((item) => extras?.variantId && item.id === extras.variantId) ??
+          product.variants.find((item) => item.size === (size ?? "") && item.color === (color ?? "")) ??
+          null
+        : null;
+    const variantId = variant?.id ?? extras?.variantId;
     const current = cartStore.read();
-    const match = current.find((line) => line.productId === product.id && line.size === size && line.color === color);
+    const match = current.find(
+      (line) =>
+        line.productId === product.id &&
+        (variantId ? line.variantId === variantId : line.size === size && line.color === color),
+    );
     if (match) {
       cartStore.write(current.map((line) => (line.id === match.id ? { ...line, quantity: line.quantity + quantity } : line)));
     } else {
@@ -91,11 +104,12 @@ export function StoreProviders({ children }: { children: React.ReactNode }) {
           productId: product.id,
           name: product.name,
           slug: product.slug,
-          image: product.images[0] ?? "",
-          price: product.price,
+          image: variant?.image || product.images[0] || "",
+          price: variant?.price ?? product.price,
           quantity,
-          size,
-          color,
+          size: variant?.size || size,
+          color: variant?.color || color,
+          variantId,
         },
       ]);
     }
@@ -127,6 +141,10 @@ export function StoreProviders({ children }: { children: React.ReactNode }) {
         const current = wishlistStore.read();
         wishlistStore.write(current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId]);
       },
+      remove: (productId) => {
+        wishlistStore.write(wishlistStore.read().filter((id) => id !== productId));
+      },
+      clear: () => wishlistStore.write([]),
       has: (productId) => ids.includes(productId),
     }),
     [ids],
@@ -141,6 +159,12 @@ export function StoreProviders({ children }: { children: React.ReactNode }) {
   );
 }
 
+function useHydrated() {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  return hydrated;
+}
+
 export function useUi() {
   const value = useContext(UiContext);
   if (!value) throw new Error("useUi must be used within StoreProviders");
@@ -150,11 +174,13 @@ export function useUi() {
 export function useCart() {
   const value = useContext(CartContext);
   if (!value) throw new Error("useCart must be used within StoreProviders");
-  return value;
+  const hydrated = useHydrated();
+  return hydrated ? value : { ...value, items: [], count: 0, subtotal: 0 };
 }
 
 export function useWishlist() {
   const value = useContext(WishlistContext);
   if (!value) throw new Error("useWishlist must be used within StoreProviders");
-  return value;
+  const hydrated = useHydrated();
+  return hydrated ? value : { ...value, ids: [], has: () => false };
 }

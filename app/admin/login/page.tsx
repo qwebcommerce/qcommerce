@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import BrandLogo from "@/components/BrandLogo";
 import TopBar from "@/components/TopBar";
 import { loginAdminAction } from "@/lib/actions";
 import { usePreferences } from "@/lib/preferences";
-import { theme } from "@/theme.config";
 
 export default function AdminLoginPage() {
   const [error, setError] = useState("");
@@ -21,7 +21,9 @@ export default function AdminLoginPage() {
           }}
           style={{ width: "min(400px, 100%)", background: "var(--warm-white)", color: "var(--black)", padding: "2.5rem", display: "flex", flexDirection: "column", gap: "1.1rem" }}
         >
-          <p dir="ltr" style={{ fontWeight: 900, letterSpacing: "0.28em", textAlign: "center" }}>{theme.brand.name}</p>
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <BrandLogo size="footer" />
+          </div>
           <h1 style={{ fontSize: "1.2rem", fontWeight: 800, textAlign: "center", letterSpacing: "0.12em" }}>{t("admin")}</h1>
           <input name="email" type="email" required defaultValue="admin@voombaza.com" className="field-input" placeholder={t("email")} />
           <input name="password" type="password" required className="field-input" placeholder={t("password")} />

@@ -2,16 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import BrandLogo from "@/components/BrandLogo";
 import TopBar from "@/components/TopBar";
+import AccountMenu, { type StoreCustomer } from "@/components/storefront/AccountMenu";
+import { logoutCustomerAction } from "@/lib/actions";
 import { usePreferences } from "@/lib/preferences";
-import { useCart, useUi } from "@/lib/store";
+import { useCart, useUi, useWishlist } from "@/lib/store";
 import { theme } from "@/theme.config";
 import type { MessageKey } from "@/lib/i18n";
 
-export default function Navbar() {
+export default function Navbar({ customer = null }: { customer?: StoreCustomer | null }) {
   const pathname = usePathname();
   const { count } = useCart();
+  const { ids: wishlistIds } = useWishlist();
   const { setSearchOpen, setCartOpen } = useUi();
   const { t } = usePreferences();
   const [scrolled, setScrolled] = useState(false);
@@ -69,19 +73,15 @@ export default function Navbar() {
 
           <Link
             href="/"
+            aria-label={theme.brand.name}
             style={{
-              color: textColor,
-              fontSize: "1.3rem",
-              fontWeight: 900,
-              letterSpacing: "0.3em",
-              textDecoration: "none",
-              whiteSpace: "nowrap",
               flex: 1,
-              textAlign: "center",
-              transition: "color 0.4s ease",
+              display: "flex",
+              justifyContent: "center",
+              textDecoration: "none",
             }}
           >
-            <span dir="ltr">{theme.brand.name}</span>
+            <BrandLogo size="nav" />
           </Link>
 
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "1.8rem" }}>
@@ -102,12 +102,9 @@ export default function Navbar() {
               <NavIcon title={t("search")} color={textColor} onClick={() => setSearchOpen(true)}>
                 <SearchIcon />
               </NavIcon>
-              <Link href="/wishlist" title={t("wishlist")} style={{ color: textColor, display: "flex" }}>
+              <NavIcon href="/wishlist" title={t("wishlist")} badge={wishlistIds.length || undefined} color={textColor}>
                 <HeartIcon />
-              </Link>
-              <Link href="/account" title={t("account")} style={{ color: textColor, display: "flex" }}>
-                <UserIcon />
-              </Link>
+              </NavIcon>
               <NavIcon title={t("bag")} badge={count} color={textColor} onClick={() => setCartOpen(true)}>
                 <BagIcon />
               </NavIcon>
@@ -132,6 +129,7 @@ export default function Navbar() {
                   )}
                 </svg>
               </button>
+              <AccountMenu customer={customer} color={textColor} />
             </div>
           </div>
         </nav>
@@ -168,6 +166,57 @@ export default function Navbar() {
               {t(link.key as MessageKey)}
             </Link>
           ))}
+          {customer ? (
+            <>
+              <Link
+                href="/account"
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  color: "var(--gold-dark)",
+                  fontSize: "1.35rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.12em",
+                  textDecoration: "none",
+                  textTransform: "uppercase",
+                }}
+              >
+                {t("dashboard")}
+              </Link>
+              <form action={logoutCustomerAction}>
+                <button
+                  type="submit"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "var(--black)",
+                    fontSize: "1.35rem",
+                    fontWeight: 800,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {t("logOut")}
+                </button>
+              </form>
+            </>
+          ) : (
+            <Link
+              href="/account/login"
+              onClick={() => setMobileOpen(false)}
+              style={{
+                color: "var(--gold-dark)",
+                fontSize: "1.35rem",
+                fontWeight: 800,
+                letterSpacing: "0.12em",
+                textDecoration: "none",
+                textTransform: "uppercase",
+              }}
+            >
+              {t("account")}
+            </Link>
+          )}
         </div>
       )}
     </>
@@ -179,33 +228,31 @@ function NavIcon({
   title,
   badge,
   color,
+  href,
   onClick,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   title: string;
   badge?: number;
   color: string;
+  href?: string;
   onClick?: () => void;
 }) {
-  return (
-    <button
-      type="button"
-      title={title}
-      onClick={onClick}
-      style={{
-        background: "none",
-        border: "none",
-        cursor: "pointer",
-        color,
-        padding: "4px",
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
+  const style: CSSProperties = {
+    background: "none",
+    border: "none",
+    cursor: "pointer",
+    color,
+    padding: "4px",
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+  const body = (
+    <>
       {children}
-      {badge !== undefined && (
+      {badge !== undefined && badge > 0 ? (
         <span
           style={{
             position: "absolute",
@@ -215,17 +262,30 @@ function NavIcon({
             color: "var(--accent-ink)",
             fontSize: "0.5rem",
             fontWeight: 800,
-            width: "14px",
+            minWidth: "14px",
             height: "14px",
+            padding: "0 3px",
             borderRadius: "50%",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          {badge}
+          {badge > 9 ? "9+" : badge}
         </span>
-      )}
+      ) : null}
+    </>
+  );
+  if (href) {
+    return (
+      <Link href={href} title={title} aria-label={title} style={style}>
+        {body}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" title={title} aria-label={title} onClick={onClick} style={style}>
+      {body}
     </button>
   );
 }
@@ -243,15 +303,6 @@ function HeartIcon() {
   return (
     <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.7" viewBox="0 0 24 24">
       <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.7" viewBox="0 0 24 24">
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
     </svg>
   );
 }

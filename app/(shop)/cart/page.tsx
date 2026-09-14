@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCommerceSettings } from "@/lib/commerce-settings";
 import { formatQar, shippingFor } from "@/lib/format";
 import { usePreferences } from "@/lib/preferences";
 import { useCart } from "@/lib/store";
@@ -8,7 +9,7 @@ import { useCart } from "@/lib/store";
 export default function CartPage() {
   const { items, subtotal, update, remove } = useCart();
   const { t } = usePreferences();
-  const shipping = shippingFor(subtotal);
+  const shipping = shippingFor(subtotal, useCommerceSettings());
 
   return (
     <section className="page-section">
