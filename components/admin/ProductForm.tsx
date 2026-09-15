@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState, useTransition, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import ImageUpload from "@/components/admin/ImageUpload";
 import ProductImagesUpload from "@/components/admin/ProductImagesUpload";
 import { saveProductAction } from "@/lib/actions";
 import { nestCategories } from "@/lib/categories";
@@ -68,7 +67,6 @@ export default function ProductForm({ product, categories }: { product?: Product
   const [colors, setColors] = useState(product?.colors.join(", ") ?? "Black");
   const [hasVariants, setHasVariants] = useState(product?.hasVariants ?? false);
   const [variants, setVariants] = useState<ProductVariant[]>(product?.variants ?? []);
-  const [variantFiles, setVariantFiles] = useState<Record<string, File | null>>({});
   const [images, setImages] = useState<string[]>(product?.images ?? []);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const selectedId =
@@ -115,9 +113,6 @@ export default function ProductForm({ product, categories }: { product?: Product
     formData.set("variants", JSON.stringify(variants));
     formData.set("images", images.join(", "));
     imageFiles.forEach((file, index) => formData.set(`imageFile_${index}`, file));
-    for (const [id, file] of Object.entries(variantFiles)) {
-      if (file) formData.set(`variantFile_${id}`, file);
-    }
     startTransition(async () => {
       const result = await saveProductAction(formData);
       if (result?.error) {
@@ -307,7 +302,6 @@ export default function ProductForm({ product, categories }: { product?: Product
                       <th>{t("sku")}</th>
                       <th>{t("priceCol")}</th>
                       <th>{t("stockCol")}</th>
-                      <th>{t("variantImage")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -333,18 +327,6 @@ export default function ProductForm({ product, categories }: { product?: Product
                           <NumericInput
                             value={variant.stock}
                             onValue={(next) => patchVariant(variant.id, { stock: next })}
-                          />
-                        </td>
-                        <td>
-                          <ImageUpload
-                            tile
-                            value={variant.image}
-                            file={variantFiles[variant.id] ?? null}
-                            onFile={(file) => setVariantFiles((current) => ({ ...current, [variant.id]: file }))}
-                            onRemove={() => {
-                              setVariantFiles((current) => ({ ...current, [variant.id]: null }));
-                              patchVariant(variant.id, { image: "" });
-                            }}
                           />
                         </td>
                       </tr>
