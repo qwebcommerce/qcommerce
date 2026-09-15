@@ -7,7 +7,25 @@ export type OrderStatus =
   | "shipped"
   | "delivered"
   | "cancelled";
+export type PaymentStatus = "unpaid" | "paid";
+export type CustomerStatus = "active" | "blocked";
 export type UserRole = "customer" | "admin";
+
+export const ORDER_STATUSES: OrderStatus[] = [
+  "pending",
+  "paid",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
+export const FULFILLMENT_STATUSES: OrderStatus[] = [
+  "pending",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
 
 export type Category = {
   id: string;
@@ -103,6 +121,7 @@ export type Order = {
   email: string;
   customerName: string;
   status: OrderStatus;
+  paymentStatus: PaymentStatus;
   items: OrderItem[];
   subtotal: number;
   discount: number;
@@ -121,6 +140,7 @@ export type Customer = {
   fullName: string;
   phone: string;
   role: UserRole;
+  status: CustomerStatus;
   passwordHash: string;
   createdAt: string;
 };

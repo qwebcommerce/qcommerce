@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import BrandLogo from "@/components/BrandLogo";
 import TopBar from "@/components/TopBar";
 import { loginAdminAction } from "@/lib/actions";
@@ -11,26 +12,48 @@ export default function AdminLoginPage() {
   const { t } = usePreferences();
 
   return (
-    <main style={{ minHeight: "100vh", background: "var(--black)" }}>
+    <main className="admin-login">
       <TopBar compact />
-      <div style={{ minHeight: "calc(100vh - 36px)", display: "grid", placeItems: "center", padding: "2rem" }}>
+      <div className="admin-login__stage">
         <form
+          className="admin-login__card"
           action={async (formData) => {
             const result = await loginAdminAction(formData);
             if (result?.error) setError(result.error);
           }}
-          style={{ width: "min(400px, 100%)", background: "var(--warm-white)", color: "var(--black)", padding: "2.5rem", display: "flex", flexDirection: "column", gap: "1.1rem" }}
         >
-          <div style={{ display: "flex", justifyContent: "center" }}>
+          <Link href="/" className="admin-login__brand" title={t("backToHomepage")}>
             <BrandLogo size="footer" />
-          </div>
-          <h1 style={{ fontSize: "1.2rem", fontWeight: 800, textAlign: "center", letterSpacing: "0.12em" }}>{t("admin")}</h1>
-          <input name="email" type="email" required defaultValue="admin@voombaza.com" className="field-input" placeholder={t("email")} />
-          <input name="password" type="password" required className="field-input" placeholder={t("password")} />
-          {error && <p style={{ color: "var(--sale)", fontSize: "0.85rem" }}>{error}</p>}
-          <button className="btn-gold">{t("signIn")}</button>
+          </Link>
+          <p className="admin-kicker">{t("admin")}</p>
+          <h1 className="admin-login__title">{t("signIn")}</h1>
+          <p className="admin-login__lead">{t("adminLoginLead")}</p>
+          <label>
+            <span className="admin-label">{t("email")}</span>
+            <input name="email" type="email" required defaultValue="admin@voombaza.com" className="admin-input" autoComplete="username" />
+          </label>
+          <label>
+            <span className="admin-label">{t("password")}</span>
+            <input name="password" type="password" required className="admin-input" placeholder={t("password")} autoComplete="current-password" />
+          </label>
+          {error ? <p className="admin-login__error">{error}</p> : null}
+          <button className="btn-gold" type="submit">
+            {t("signIn")}
+          </button>
+          <Link href="/" className="admin-login__home">
+            <HomeIcon />
+            {t("backToHomepage")}
+          </Link>
         </form>
       </div>
     </main>
+  );
+}
+
+function HomeIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4.5 11.2 12 4.8l7.5 6.4v8.3a1.5 1.5 0 0 1-1.5 1.5h-4.2v-5.2h-3.6v5.2H6a1.5 1.5 0 0 1-1.5-1.5v-8.3Z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+    </svg>
   );
 }

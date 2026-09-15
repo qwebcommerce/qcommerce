@@ -11,11 +11,12 @@ import {
   deleteProduct,
   emailHasUsedPromo,
   getCategoryById,
+  getCustomerById,
   getProductById,
   getStoreSettings,
   listCategories,
   updateCustomer,
-  updateOrderStatus,
+  updateOrder,
   updateProduct,
   updateStoreSettings,
   upsertCategory,
@@ -35,8 +36,19 @@ import { mapVariants } from "@/lib/db/mappers";
 import { normalizePromo, promoIsActive } from "@/lib/format";
 import { productStock } from "@/lib/products";
 import { removeStoredImage, uploadCategoryImage } from "@/lib/storage";
-import { isValidEmail, parseGulfPhone } from "@/lib/validation";
-import type { OrderItem, OrderStatus, PaymentMethod, ProductBadge, ProductInput, ProductStatus, ProductVariant } from "@/types";
+import { composeGulfPhone, isValidEmail, parseGulfPhone } from "@/lib/validation";
+import type {
+  CustomerStatus,
+  OrderItem,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  ProductBadge,
+  ProductInput,
+  ProductStatus,
+  ProductVariant,
+} from "@/types";
+import { ORDER_STATUSES } from "@/types";
 
 function formString(form: FormData, key: string) {
   return String(form.get(key) ?? "").trim();
@@ -94,16 +106,18 @@ export async function logoutCustomerAction() {
 export async function updateCustomerProfileAction(formData: FormData) {
   const session = await getCustomerSession();
   if (!session) redirect("/account/login");
+  const fullName = formString(formData, "fullName");
+  const phoneLocal = formString(formData, "phoneLocal");
+  const phone = phoneLocal ? composeGulfPhone(formString(formData, "phoneCode"), phoneLocal) : "";
+  if (phoneLocal && !phone) return { error: "Enter a valid Gulf phone number" };
   try {
-    const customer = await updateCustomer(session.id, {
-      fullName: formString(formData, "fullName"),
-      phone: formString(formData, "phone"),
-    });
+    const customer = await updateCustomer(session.id, { fullName, phone });
     await setCustomerSession({ id: customer.id, email: customer.email, fullName: customer.fullName });
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Could not update profile" };
   }
   revalidatePath("/account");
+  revalidatePath("/account/profile");
   revalidatePath("/checkout");
   return { ok: true as const };
 }
@@ -265,14 +279,58 @@ export async function deleteProductAction(formData: FormData) {
   }
 }
 
+function revalidateOrderPaths(id: string) {
+  revalidatePath("/admin");
+  revalidatePath("/admin/orders");
+  revalidatePath(`/admin/orders/${id}`);
+  revalidatePath("/account");
+  revalidatePath("/account/orders");
+}
+
 export async function updateOrderStatusAction(formData: FormData) {
   await requireAdmin();
   const id = formString(formData, "id");
   const status = formString(formData, "status") as OrderStatus;
-  await updateOrderStatus(id, status);
-  revalidatePath("/admin/orders");
-  revalidatePath(`/admin/orders/${id}`);
-  revalidatePath("/account");
+  if (!ORDER_STATUSES.includes(status)) return { error: "Invalid order status." };
+  try {
+    await updateOrder(id, { status });
+    revalidateOrderPaths(id);
+    return { ok: true as const };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not update order." };
+  }
+}
+
+export async function updateOrderPaymentAction(formData: FormData) {
+  await requireAdmin();
+  const id = formString(formData, "id");
+  const paymentStatus = formString(formData, "paymentStatus") as PaymentStatus;
+  if (paymentStatus !== "paid" && paymentStatus !== "unpaid") return { error: "Invalid payment status." };
+  try {
+    await updateOrder(id, { paymentStatus });
+    revalidateOrderPaths(id);
+    return { ok: true as const };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not update payment." };
+  }
+}
+
+export async function updateCustomerStatusAction(formData: FormData) {
+  await requireAdmin();
+  const id = formString(formData, "id");
+  const status = formString(formData, "status") as CustomerStatus;
+  if (status !== "active" && status !== "blocked") return { error: "Invalid customer status." };
+  try {
+    const customer = await getCustomerById(id);
+    if (!customer) return { error: "Customer not found." };
+    if (customer.role === "admin") return { error: "Administrator accounts cannot be blocked." };
+    await updateCustomer(id, { status });
+    revalidatePath("/admin/customers");
+    revalidatePath(`/admin/customers/${id}`);
+    return { ok: true as const };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not update customer." };
+  }
 }
 
 export async function saveCategoryAction(formData: FormData) {

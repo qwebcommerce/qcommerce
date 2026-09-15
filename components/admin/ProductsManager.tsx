@@ -153,8 +153,8 @@ export default function ProductsManager({
                         </div>
                       </div>
                     </td>
-                    <td>{product.category}</td>
-                    <td>
+                    <td data-label={t("productCategory")}>{product.category}</td>
+                    <td data-label={t("priceCol")}>
                       {(() => {
                         const range = productPriceRange(product);
                         return range.min !== range.max
@@ -162,8 +162,10 @@ export default function ProductsManager({
                           : formatQar(range.min);
                       })()}
                     </td>
-                    <td className={productStock(product) < 5 ? "is-critical" : undefined}>{productStock(product)}</td>
-                    <td>
+                    <td data-label={t("stockCol")} className={productStock(product) < 5 ? "is-critical" : undefined}>
+                      {productStock(product)}
+                    </td>
+                    <td data-label={t("status")}>
                       <StatusBadge status={product.status} />
                     </td>
                   </tr>

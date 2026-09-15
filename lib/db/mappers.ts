@@ -1,4 +1,14 @@
-import type { Category, Customer, Order, OrderItem, Product, ProductBadge, ProductVariant } from "@/types";
+import type {
+  Category,
+  Customer,
+  CustomerStatus,
+  Order,
+  OrderItem,
+  PaymentStatus,
+  Product,
+  ProductBadge,
+  ProductVariant,
+} from "@/types";
 
 type ProductRow = {
   id: string;
@@ -42,6 +52,7 @@ type OrderRow = {
   email: string;
   customer_name: string;
   status: Order["status"];
+  payment_status?: PaymentStatus | null;
   items: OrderItem[];
   subtotal: number;
   shipping: number;
@@ -57,6 +68,7 @@ type CustomerRow = {
   full_name: string;
   phone: string | null;
   role: Customer["role"];
+  status?: CustomerStatus | null;
   password_hash: string | null;
   created_at: string;
 };
@@ -125,6 +137,12 @@ export function mapCategory(row: CategoryRow): Category {
 export function mapOrder(row: OrderRow): Order {
   const address = row.shipping_address ?? { line1: "", city: "", country: "" };
   const discount = Number(address.discount ?? 0);
+  const paymentStatus: PaymentStatus =
+    row.payment_status === "paid" || row.payment_status === "unpaid"
+      ? row.payment_status
+      : row.status === "paid"
+        ? "paid"
+        : "unpaid";
   return {
     id: row.id,
     orderNumber: row.order_number,
@@ -132,6 +150,7 @@ export function mapOrder(row: OrderRow): Order {
     email: row.email,
     customerName: row.customer_name,
     status: row.status,
+    paymentStatus,
     items: row.items ?? [],
     subtotal: Number(row.subtotal),
     discount: Number.isFinite(discount) ? discount : 0,
@@ -152,6 +171,7 @@ export function mapCustomer(row: CustomerRow): Customer {
     fullName: row.full_name,
     phone: row.phone ?? "",
     role: row.role,
+    status: row.status === "blocked" ? "blocked" : "active",
     passwordHash: row.password_hash ?? "",
     createdAt: row.created_at,
   };

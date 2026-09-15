@@ -2,31 +2,59 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import BrandLogo from "@/components/BrandLogo";
 import TopBar from "@/components/TopBar";
 import AccountMenu, { type StoreCustomer } from "@/components/storefront/AccountMenu";
-import { logoutCustomerAction } from "@/lib/actions";
+import AccountTabs from "@/components/storefront/AccountTabs";
+import CollectionsMenu, { CollectionsPanel } from "@/components/storefront/CollectionsMenu";
 import { usePreferences } from "@/lib/preferences";
 import { useCart, useUi, useWishlist } from "@/lib/store";
 import { theme } from "@/theme.config";
-import type { MessageKey } from "@/lib/i18n";
+import type { Category } from "@/types";
 
-export default function Navbar({ customer = null }: { customer?: StoreCustomer | null }) {
+export default function Navbar({
+  customer = null,
+  categories = [],
+}: {
+  customer?: StoreCustomer | null;
+  categories?: Category[];
+}) {
   const pathname = usePathname();
   const { count } = useCart();
   const { ids: wishlistIds } = useWishlist();
   const { setSearchOpen, setCartOpen } = useUi();
   const { t } = usePreferences();
   const [scrolled, setScrolled] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const closeTimer = useRef<number | null>(null);
   const isHome = pathname === "/";
-  const solid = !isHome || scrolled;
+  const isAuthPage = pathname.startsWith("/account/login") || pathname.startsWith("/account/register");
+  const showAccountTabs = Boolean(customer) && !isAuthPage;
+  const solid = !isHome || scrolled || collectionsOpen;
   const textColor = solid ? "var(--black)" : "#fff";
-  const allLinks = [
-    ...theme.nav.left.map((link) => ({ ...link, sale: false })),
-    ...theme.nav.right,
-  ];
+
+  function clearCloseTimer() {
+    if (closeTimer.current) {
+      window.clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }
+
+  function openCollections() {
+    clearCloseTimer();
+    setCollectionsOpen(true);
+  }
+
+  function closeCollections() {
+    clearCloseTimer();
+    setCollectionsOpen(false);
+  }
+
+  function scheduleClose() {
+    clearCloseTimer();
+    closeTimer.current = window.setTimeout(() => setCollectionsOpen(false), 160);
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50);
@@ -35,191 +63,99 @@ export default function Navbar({ customer = null }: { customer?: StoreCustomer |
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    if (!collectionsOpen) return;
+    const onPointer = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest(".shop-nav-shell, .nav-mega-trigger")) return;
+      closeCollections();
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeCollections();
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [collectionsOpen]);
+
+  useEffect(() => () => clearCloseTimer(), []);
+
+  useEffect(() => {
+    if (!collectionsOpen) return;
+    const prev = document.body.style.overflow;
+    if (window.matchMedia("(max-width: 760px)").matches) document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [collectionsOpen]);
+
   return (
-    <>
-      <header
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-          transition: "background 0.4s ease, backdrop-filter 0.4s ease, box-shadow 0.4s ease",
-          backgroundColor: solid ? "var(--nav-solid)" : "transparent",
-          backdropFilter: solid ? "blur(12px)" : "none",
-          boxShadow: solid ? "0 1px 0 var(--sand)" : "none",
+    <header
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
+        transition: "background 0.4s ease, backdrop-filter 0.4s ease, box-shadow 0.4s ease",
+        backgroundColor: solid ? "var(--nav-solid)" : "transparent",
+        backdropFilter: solid ? "blur(12px)" : "none",
+        boxShadow: solid ? "0 1px 0 var(--sand)" : "none",
+      }}
+    >
+      <TopBar />
+
+      <div
+        className="shop-nav-shell"
+        onMouseLeave={() => {
+          if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) scheduleClose();
         }}
       >
-        <TopBar />
-
-        <nav
-          style={{
-            maxWidth: "1400px",
-            margin: "0 auto",
-            padding: "0 2rem",
-            height: "68px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <div style={{ flex: 1, display: "flex", gap: "2.2rem" }} className="hidden md:flex">
-            {theme.nav.left.map((link) => (
-              <Link key={link.key} href={link.href} className="nav-link" style={{ color: textColor }}>
-                {t(link.key as MessageKey)}
-              </Link>
-            ))}
+        <nav className="shop-nav">
+          <div className="shop-nav-left">
+            <CollectionsMenu
+              color={textColor}
+              open={collectionsOpen}
+              onOpen={() => {
+                if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) openCollections();
+              }}
+              onClose={closeCollections}
+              onToggle={() => (collectionsOpen ? closeCollections() : openCollections())}
+            />
+            <Link href="/shop" className="nav-link shop-nav-store" style={{ color: textColor }}>
+              {t("store")}
+            </Link>
           </div>
 
-          <Link
-            href="/"
-            aria-label={theme.brand.name}
-            style={{
-              flex: 1,
-              display: "flex",
-              justifyContent: "center",
-              textDecoration: "none",
-            }}
-          >
+          <Link href="/" aria-label={theme.brand.name} className="shop-nav-logo">
             <BrandLogo size="nav" />
           </Link>
 
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "1.8rem" }}>
-            <div style={{ display: "flex", gap: "2.2rem" }} className="hidden md:flex">
-              {theme.nav.right.map((link) => (
-                <Link
-                  key={link.key}
-                  href={link.href}
-                  className="nav-link"
-                  style={{ color: link.sale ? "var(--sale)" : textColor }}
-                >
-                  {t(link.key as MessageKey)}
-                </Link>
-              ))}
-            </div>
-
-            <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-              <NavIcon title={t("search")} color={textColor} onClick={() => setSearchOpen(true)}>
-                <SearchIcon />
-              </NavIcon>
-              <NavIcon href="/wishlist" title={t("wishlist")} badge={wishlistIds.length || undefined} color={textColor}>
-                <HeartIcon />
-              </NavIcon>
-              <NavIcon title={t("bag")} badge={count} color={textColor} onClick={() => setCartOpen(true)}>
-                <BagIcon />
-              </NavIcon>
-              <button
-                onClick={() => setMobileOpen((v) => !v)}
-                className="md:hidden"
-                style={{ background: "none", border: "none", cursor: "pointer", color: textColor, padding: "4px" }}
-                aria-label={t("menu")}
-              >
-                <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" viewBox="0 0 24 24">
-                  {mobileOpen ? (
-                    <>
-                      <path d="M18 6 6 18" />
-                      <path d="m6 6 12 12" />
-                    </>
-                  ) : (
-                    <>
-                      <line x1="3" y1="6" x2="21" y2="6" />
-                      <line x1="3" y1="12" x2="21" y2="12" />
-                      <line x1="3" y1="18" x2="21" y2="18" />
-                    </>
-                  )}
-                </svg>
-              </button>
-              <AccountMenu customer={customer} color={textColor} />
-            </div>
+          <div className="shop-nav-right">
+            <NavIcon title={t("search")} color={textColor} onClick={() => setSearchOpen(true)}>
+              <SearchIcon />
+            </NavIcon>
+            <NavIcon href="/wishlist" title={t("wishlist")} badge={wishlistIds.length || undefined} color={textColor}>
+              <HeartIcon />
+            </NavIcon>
+            <NavIcon title={t("bag")} badge={count} color={textColor} onClick={() => setCartOpen(true)}>
+              <BagIcon />
+            </NavIcon>
+            <AccountMenu customer={customer} color={textColor} />
           </div>
         </nav>
-      </header>
-
-      {mobileOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 999,
-            backgroundColor: "var(--warm-white)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "2.5rem",
-          }}
-        >
-          {allLinks.map((link) => (
-            <Link
-              key={link.key}
-              href={link.href}
-              onClick={() => setMobileOpen(false)}
-              style={{
-                color: "var(--black)",
-                fontSize: "2rem",
-                fontWeight: 800,
-                letterSpacing: "0.12em",
-                textDecoration: "none",
-                textTransform: "uppercase",
-              }}
-            >
-              {t(link.key as MessageKey)}
-            </Link>
-          ))}
-          {customer ? (
-            <>
-              <Link
-                href="/account"
-                onClick={() => setMobileOpen(false)}
-                style={{
-                  color: "var(--gold-dark)",
-                  fontSize: "1.35rem",
-                  fontWeight: 800,
-                  letterSpacing: "0.12em",
-                  textDecoration: "none",
-                  textTransform: "uppercase",
-                }}
-              >
-                {t("dashboard")}
-              </Link>
-              <form action={logoutCustomerAction}>
-                <button
-                  type="submit"
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "var(--black)",
-                    fontSize: "1.35rem",
-                    fontWeight: 800,
-                    letterSpacing: "0.12em",
-                    textTransform: "uppercase",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  {t("logOut")}
-                </button>
-              </form>
-            </>
-          ) : (
-            <Link
-              href="/account/login"
-              onClick={() => setMobileOpen(false)}
-              style={{
-                color: "var(--gold-dark)",
-                fontSize: "1.35rem",
-                fontWeight: 800,
-                letterSpacing: "0.12em",
-                textDecoration: "none",
-                textTransform: "uppercase",
-              }}
-            >
-              {t("account")}
-            </Link>
-          )}
-        </div>
-      )}
-    </>
+        <CollectionsPanel
+          categories={categories}
+          open={collectionsOpen}
+          onOpen={openCollections}
+          onClose={closeCollections}
+        />
+      </div>
+      {showAccountTabs ? <AccountTabs color={textColor} /> : null}
+    </header>
   );
 }
 
@@ -316,4 +252,3 @@ function BagIcon() {
     </svg>
   );
 }
-

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import ProductCard from "@/components/storefront/ProductCard";
 import { categoryLabel } from "@/lib/i18n";
 import { formatQar } from "@/lib/format";
-import { findVariant, localizedProductDescription, localizedProductName } from "@/lib/products";
+import { bilingualCopy, findVariant } from "@/lib/products";
 import { usePreferences } from "@/lib/preferences";
 import { useCart, useWishlist } from "@/lib/store";
 import { useToast } from "@/lib/toast";
@@ -15,8 +15,13 @@ export default function ProductDetail({ product, related }: { product: Product; 
   const toast = useToast();
   const { toggle, has } = useWishlist();
   const { t, locale } = usePreferences();
-  const name = localizedProductName(product, locale);
-  const description = localizedProductDescription(product, locale);
+  const title = bilingualCopy(product.name, product.nameAr, locale);
+  const category = bilingualCopy(
+    categoryLabel("en", product.categorySlug, product.category),
+    categoryLabel("ar", product.categorySlug, product.category),
+    locale,
+  );
+  const name = title.primary;
   const [size, setSize] = useState(product.sizes[0] ?? "");
   const [color, setColor] = useState(product.colors[0] ?? "");
   const [qty, setQty] = useState(1);
@@ -43,8 +48,8 @@ export default function ProductDetail({ product, related }: { product: Product; 
   }
 
   return (
-    <section className="page-section" style={{ maxWidth: 1400 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4rem" }} className="max-md:grid-cols-1">
+    <section className="page-section product-page">
+      <div className="product-detail">
         <div>
           <div className="img-zoom" style={{ background: "var(--sand)", aspectRatio: "3/4" }}>
             <img src={image} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -60,10 +65,22 @@ export default function ProductDetail({ product, related }: { product: Product; 
           )}
         </div>
         <div>
-          <p style={{ fontSize: "0.62rem", color: "var(--gold)", letterSpacing: "0.35em", textTransform: "uppercase", marginBottom: "0.75rem" }}>
-            {categoryLabel(locale, product.categorySlug, product.category)}
+          <p className="product-detail__kicker">
+            <span dir={category.primaryDir}>{category.primary}</span>
+            {category.secondary ? (
+              <span dir={category.secondaryDir} lang={category.secondaryDir === "rtl" ? "ar" : undefined}>
+                {category.secondary}
+              </span>
+            ) : null}
           </p>
-          <h1 style={{ fontSize: "clamp(1.8rem,4vw,2.8rem)", fontWeight: 900, textTransform: "uppercase", letterSpacing: "-0.02em", marginBottom: "1rem" }}>{name}</h1>
+          <h1 className="product-detail__title" dir={title.primaryDir} lang={title.primaryDir === "rtl" ? "ar" : undefined}>
+            {title.primary}
+          </h1>
+          {title.secondary ? (
+            <p className="product-title-ar" dir={title.secondaryDir} lang={title.secondaryDir === "rtl" ? "ar" : undefined}>
+              {title.secondary}
+            </p>
+          ) : null}
           <div style={{ display: "flex", gap: "0.75rem", alignItems: "baseline", marginBottom: "1.5rem" }}>
             <span style={{ fontSize: "1.25rem", fontWeight: 700 }}>{formatQar(price)}</span>
             {compareAt ? <span style={{ color: "var(--muted)", textDecoration: "line-through" }}>{formatQar(compareAt)}</span> : null}
@@ -111,7 +128,18 @@ export default function ProductDetail({ product, related }: { product: Product; 
           </button>
           <div style={{ marginTop: "2rem", borderTop: "1px solid var(--sand)", paddingTop: "2rem", color: "var(--muted)", lineHeight: 1.85 }}>
             <h3 style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.2em", textTransform: "uppercase", color: "var(--black)", marginBottom: "1rem" }}>{t("description")}</h3>
-            <p>{description}</p>
+            <div className="product-desc-bilingual">
+              {product.description.trim() ? (
+                <p dir="ltr" lang="en">
+                  {product.description}
+                </p>
+              ) : null}
+              {(product.descriptionAr ?? "").trim() ? (
+                <p dir="rtl" lang="ar">
+                  {product.descriptionAr}
+                </p>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

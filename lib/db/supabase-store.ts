@@ -11,11 +11,13 @@ import type {
   CategoryInput,
   Customer,
   CustomerInput,
+  CustomerStatus,
   DashboardStats,
   NewsletterEntry,
   Order,
   OrderInput,
   OrderStatus,
+  PaymentStatus,
   Product,
   ProductFilters,
   ProductInput,
@@ -343,6 +345,7 @@ export async function createOrder(input: OrderInput): Promise<Order> {
     email: input.email,
     customer_name: input.customerName,
     status: "pending",
+    payment_status: "unpaid",
     items: input.items,
     subtotal,
     shipping,
@@ -384,11 +387,26 @@ export async function createOrder(input: OrderInput): Promise<Order> {
   return mapOrder(data);
 }
 
-export async function updateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
+export async function updateOrder(
+  id: string,
+  patch: { status?: OrderStatus; paymentStatus?: PaymentStatus },
+): Promise<Order> {
   const sb = client();
-  const { data, error } = await sb.from("orders").update({ status }).eq("id", id).select("*").single();
+  const row: Record<string, string> = {};
+  if (patch.status) row.status = patch.status;
+  if (patch.paymentStatus) row.payment_status = patch.paymentStatus;
+  if (!Object.keys(row).length) {
+    const current = await getOrderById(id);
+    if (!current) throw new Error("Order not found");
+    return current;
+  }
+  const { data, error } = await sb.from("orders").update(row).eq("id", id).select("*").single();
   if (error) throw error;
   return mapOrder(data);
+}
+
+export async function updateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
+  return updateOrder(id, { status });
 }
 
 export async function listCustomers(): Promise<Customer[]> {
@@ -421,6 +439,7 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
       full_name: input.fullName,
       phone: input.phone ?? "",
       role: "customer",
+      status: "active",
       password_hash: hashPassword(input.password),
     })
     .select("*")
@@ -431,18 +450,14 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
 
 export async function updateCustomer(
   id: string,
-  input: { fullName: string; phone: string },
+  input: { fullName?: string; phone?: string; status?: CustomerStatus },
 ): Promise<Customer> {
   const sb = client();
-  const { data, error } = await sb
-    .from("customers")
-    .update({
-      full_name: input.fullName,
-      phone: input.phone,
-    })
-    .eq("id", id)
-    .select("*")
-    .single();
+  const row: Record<string, string> = {};
+  if (input.fullName !== undefined) row.full_name = input.fullName;
+  if (input.phone !== undefined) row.phone = input.phone;
+  if (input.status !== undefined) row.status = input.status;
+  const { data, error } = await sb.from("customers").update(row).eq("id", id).select("*").single();
   if (error) throw error;
   return mapCustomer(data);
 }

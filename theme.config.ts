@@ -68,15 +68,8 @@ export const theme = {
   },
 
   nav: {
-    left: [
-      { key: "men", href: "/shop" },
-      { key: "women", href: "/shop" },
-      { key: "newIn", href: "/shop/new-arrivals" },
-    ],
-    right: [
-      { key: "collections", href: "/shop", sale: false },
-      { key: "sale", href: "/shop?sort=price-asc", sale: true },
-    ],
+    left: [{ key: "collections", href: "/shop" }],
+    right: [],
   },
 
   announcement: {

@@ -95,9 +95,14 @@ create table if not exists public.customers (
   full_name text not null,
   phone text default '',
   role text not null default 'customer' check (role in ('customer', 'admin')),
+  status text not null default 'active' check (status in ('active', 'blocked')),
   password_hash text,
   created_at timestamptz not null default now()
 );
+
+alter table public.customers add column if not exists status text not null default 'active';
+alter table public.customers drop constraint if exists customers_status_check;
+alter table public.customers add constraint customers_status_check check (status in ('active', 'blocked'));
 
 create table if not exists public.orders (
   id uuid primary key default gen_random_uuid(),
@@ -108,6 +113,7 @@ create table if not exists public.orders (
   status text not null default 'pending' check (
     status in ('pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled')
   ),
+  payment_status text not null default 'unpaid' check (payment_status in ('unpaid', 'paid')),
   items jsonb not null default '[]',
   subtotal numeric(10,2) not null,
   shipping numeric(10,2) not null default 0,
@@ -116,6 +122,11 @@ create table if not exists public.orders (
   notes text default '',
   created_at timestamptz not null default now()
 );
+
+alter table public.orders add column if not exists payment_status text not null default 'unpaid';
+alter table public.orders drop constraint if exists orders_payment_status_check;
+alter table public.orders add constraint orders_payment_status_check check (payment_status in ('unpaid', 'paid'));
+update public.orders set payment_status = 'paid' where status = 'paid' and payment_status <> 'paid';
 
 create table if not exists public.newsletter (
   id uuid primary key default gen_random_uuid(),

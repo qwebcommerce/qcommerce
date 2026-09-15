@@ -74,8 +74,13 @@ export default function AdminShell({
               <BrandLogo size="admin" />
             </Link>
             <div className="admin-identity">
-              <strong>{t("administrator")}</strong>
-              <span>{email || t("admin")}</span>
+              <span className="admin-identity__avatar" aria-hidden="true">
+                {(email || t("admin")).trim().charAt(0).toUpperCase()}
+              </span>
+              <div className="admin-identity__meta">
+                <strong>{t("administrator")}</strong>
+                <span>{email || t("admin")}</span>
+              </div>
             </div>
             <button type="button" className="admin-drawer-close" onClick={() => setMenuOpen(false)}>
               <CloseIcon />
@@ -210,3 +215,4 @@ function SettingsIcon() {
     </svg>
   );
 }
+

@@ -5,11 +5,13 @@ import type {
   CategoryInput,
   Customer,
   CustomerInput,
+  CustomerStatus,
   DashboardStats,
   NewsletterEntry,
   Order,
   OrderInput,
   OrderStatus,
+  PaymentStatus,
   Product,
   ProductFilters,
   ProductInput,
@@ -77,7 +79,18 @@ export async function createOrder(input: OrderInput): Promise<Order> {
 }
 
 export async function updateOrderStatus(id: string, status: OrderStatus): Promise<Order> {
-  return supabaseStore.updateOrderStatus(id, status);
+  return supabaseStore.updateOrder(id, { status });
+}
+
+export async function updateOrderPaymentStatus(id: string, paymentStatus: PaymentStatus): Promise<Order> {
+  return supabaseStore.updateOrder(id, { paymentStatus });
+}
+
+export async function updateOrder(
+  id: string,
+  patch: { status?: OrderStatus; paymentStatus?: PaymentStatus },
+): Promise<Order> {
+  return supabaseStore.updateOrder(id, patch);
 }
 
 export async function listCustomers(): Promise<Customer[]> {
@@ -98,7 +111,7 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
 
 export async function updateCustomer(
   id: string,
-  input: { fullName: string; phone: string },
+  input: { fullName?: string; phone?: string; status?: CustomerStatus },
 ): Promise<Customer> {
   return supabaseStore.updateCustomer(id, input);
 }

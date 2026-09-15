@@ -72,6 +72,12 @@ export default function AccountMenu({
           <Link href="/account" role="menuitem" onClick={() => setOpen(false)}>
             {t("dashboard")}
           </Link>
+          <Link href="/account/orders" role="menuitem" onClick={() => setOpen(false)}>
+            {t("ordersNav")}
+          </Link>
+          <Link href="/account/profile" role="menuitem" onClick={() => setOpen(false)}>
+            {t("profileNav")}
+          </Link>
           <form action={logoutCustomerAction}>
             <button type="submit" role="menuitem">
               {t("logOut")}

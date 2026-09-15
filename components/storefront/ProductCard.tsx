@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { formatQar } from "@/lib/format";
 import { categoryLabel } from "@/lib/i18n";
-import { firstAvailableVariant, localizedProductName, productPriceRange, productStock, variantImage } from "@/lib/products";
+import { bilingualCopy, firstAvailableVariant, productPriceRange, productStock, variantImage } from "@/lib/products";
 import { usePreferences } from "@/lib/preferences";
 import { useCart, useWishlist } from "@/lib/store";
 import { useToast } from "@/lib/toast";
@@ -30,13 +30,14 @@ export default function ProductCard({
   const toast = useToast();
   const { t, locale } = usePreferences();
   const style = BADGE[product.badge ?? ""];
-  const name = localizedProductName(product, locale);
+  const title = bilingualCopy(product.name, product.nameAr, locale);
   const range = productPriceRange(product);
   const stock = productStock(product);
   const variant = firstAvailableVariant(product);
   const cover = variantImage(product, variant);
   const saved = has(product.id);
   const simple = !product.hasVariants;
+  const name = title.primary;
 
   function addToBag() {
     if (!simple || stock <= 0) return;
@@ -45,7 +46,7 @@ export default function ProductCard({
   }
 
   return (
-    <article className="product-card" style={{ width: width ? `${width}px` : undefined, flexShrink: width ? 0 : undefined, scrollSnapAlign: width ? "start" : undefined, position: "relative" }}>
+    <article className="product-card" style={{ width: width ? `${width}px` : undefined, flexShrink: width ? 0 : undefined, scrollSnapAlign: width ? "start" : undefined }}>
       <div className="prod-img" style={width ? { width: `${width}px` } : undefined}>
         <Link href={`/product/${product.slug}`} style={{ position: "absolute", inset: 0 }}>
           <img src={cover} alt={name} loading="lazy" />
@@ -80,30 +81,32 @@ export default function ProductCard({
           <HeartIcon filled={saved} />
         </button>
         {simple ? (
-          <button
-            type="button"
-            className="add-btn"
-            onClick={addToBag}
-            disabled={stock <= 0}
-          >
+          <button type="button" className="add-btn" onClick={addToBag} disabled={stock <= 0}>
             {stock <= 0 ? t("outOfStock") : t("addToBag")}
           </button>
         ) : null}
       </div>
-      <Link href={`/product/${product.slug}`} style={{ textDecoration: "none", color: "inherit", display: "block" }}>
-        <p style={{ fontSize: "0.58rem", color: "var(--muted)", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: "0.35rem" }}>
-          {categoryLabel(locale, product.categorySlug, product.category)}
+      <Link href={`/product/${product.slug}`} className="product-card__copy">
+        <p className="product-card__kicker">{categoryLabel(locale, product.categorySlug, product.category)}</p>
+        <p className="product-card__name">
+          <span dir={title.primaryDir} lang={title.primaryDir === "rtl" ? "ar" : undefined}>
+            {title.primary}
+          </span>
         </p>
-        <p style={{ fontSize: "0.9rem", fontWeight: 600, color: "var(--black)", marginBottom: "0.4rem", lineHeight: 1.3 }}>
-          {name}
-        </p>
-        <div style={{ display: "flex", gap: "0.55rem", alignItems: "baseline" }}>
+        {title.secondary ? (
+          <p className="product-card__name-ar">
+            <span dir={title.secondaryDir} lang={title.secondaryDir === "rtl" ? "ar" : undefined}>
+              {title.secondary}
+            </span>
+          </p>
+        ) : null}
+        <div className="product-card__price">
           <span style={{ fontSize: "0.88rem", fontWeight: 700, color: "var(--black)" }}>
             {range.min !== range.max ? t("fromPrice", { price: formatQar(range.min) }) : formatQar(range.min)}
           </span>
-          {product.compareAtPrice && (
+          {product.compareAtPrice ? (
             <span style={{ fontSize: "0.75rem", color: "var(--muted)", textDecoration: "line-through" }}>{formatQar(product.compareAtPrice)}</span>
-          )}
+          ) : null}
         </div>
       </Link>
       {showRemove ? (

@@ -1,17 +1,35 @@
 import type { Product, ProductVariant } from "@/types";
 import type { Locale } from "@/theme.config";
 
+export function bilingualCopy(en: string, ar: string | undefined, locale: Locale) {
+  const english = en.trim();
+  const arabic = (ar ?? "").trim();
+  if (locale === "ar") {
+    const primary = arabic || english;
+    return {
+      primary,
+      secondary: primary && english && english !== primary ? english : "",
+      primaryDir: (arabic ? "rtl" : "ltr") as "rtl" | "ltr",
+      secondaryDir: "ltr" as const,
+    };
+  }
+  return {
+    primary: english,
+    secondary: arabic && arabic !== english ? arabic : "",
+    primaryDir: "ltr" as const,
+    secondaryDir: "rtl" as const,
+  };
+}
+
 export function localizedProductName(product: Pick<Product, "name" | "nameAr">, locale: Locale) {
-  if (locale === "ar") return product.nameAr || product.name;
-  return product.name;
+  return bilingualCopy(product.name, product.nameAr, locale).primary;
 }
 
 export function localizedProductDescription(
   product: Pick<Product, "description" | "descriptionAr">,
   locale: Locale,
 ) {
-  if (locale === "ar") return product.descriptionAr || product.description;
-  return product.description;
+  return bilingualCopy(product.description, product.descriptionAr, locale).primary;
 }
 
 export function matchesProductSearch(product: Product, query: string) {

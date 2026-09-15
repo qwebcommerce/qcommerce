@@ -23,32 +23,29 @@ export default function Catalog({
   const tree = nestCategories(categories);
   const active = categories.find((category) => category.slug === activeSlug);
   return (
-    <section className="page-section" style={{ maxWidth: 1400 }}>
+    <section className="page-section catalog">
       <span className="section-eyebrow">{t("collections")}</span>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "1rem", flexWrap: "wrap", marginBottom: "2.5rem" }}>
+      <div className="catalog__head">
         <h1 className="section-title">{active ? localizedCategoryName(active, locale) : t("allProducts")}</h1>
-        <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>{t("productsCount", { count: products.length })}</p>
+        <p className="catalog__count">{t("productsCount", { count: products.length })}</p>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "2.5rem" }} className="max-md:grid-cols-1">
-        <aside>
+      <div className="catalog__body">
+        <aside className="catalog__nav">
           <p className="admin-label">{t("categories")}</p>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.7rem" }}>
-            <Link href="/shop" style={{ color: !activeSlug ? "var(--gold)" : "var(--black)", textDecoration: "none", fontSize: "0.9rem" }}>{t("all")}</Link>
+          <div className="catalog__cats">
+            <Link href="/shop" className={`catalog__cat${!activeSlug ? " is-active" : ""}`}>
+              {t("all")}
+            </Link>
             {tree.map((cat) => (
-              <div key={cat.id} style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
-                <Link href={`/shop/${cat.slug}`} style={{ color: activeSlug === cat.slug ? "var(--gold)" : "var(--black)", textDecoration: "none", fontSize: "0.9rem" }}>
+              <div key={cat.id} className="catalog__group">
+                <Link href={`/shop/${cat.slug}`} className={`catalog__cat${activeSlug === cat.slug ? " is-active" : ""}`}>
                   {localizedCategoryName(cat, locale)}
                 </Link>
                 {cat.children.map((child) => (
                   <Link
                     key={child.id}
                     href={`/shop/${child.slug}`}
-                    style={{
-                      color: activeSlug === child.slug ? "var(--gold)" : "var(--muted)",
-                      textDecoration: "none",
-                      fontSize: "0.82rem",
-                      paddingInlineStart: "0.9rem",
-                    }}
+                    className={`catalog__cat catalog__cat--child${activeSlug === child.slug ? " is-active" : ""}`}
                   >
                     {localizedCategoryName(child, locale)}
                   </Link>
@@ -57,8 +54,8 @@ export default function Catalog({
             ))}
           </div>
         </aside>
-        <div>
-          <div style={{ marginBottom: "1.5rem", display: "flex", justifyContent: "flex-end", gap: "0.75rem", flexWrap: "wrap" }}>
+        <div className="catalog__main">
+          <div className="catalog__sort">
             {[
               { value: "newest", label: t("newest") },
               { value: "price-asc", label: t("priceLow") },
@@ -66,18 +63,18 @@ export default function Catalog({
               { value: "name", label: t("name") },
             ].map((option) => {
               const href = activeSlug ? `/shop/${activeSlug}?sort=${option.value}` : `/shop?sort=${option.value}`;
-              const active = (sort ?? "newest") === option.value;
+              const isActive = (sort ?? "newest") === option.value;
               return (
-                <Link key={option.value} href={href} className={`filter-tab${active ? " active" : ""}`}>
+                <Link key={option.value} href={href} className={`filter-tab${isActive ? " active" : ""}`}>
                   {option.label}
                 </Link>
               );
             })}
           </div>
           {products.length === 0 ? (
-            <p style={{ color: "var(--muted)" }}>{t("noProducts")}</p>
+            <p className="catalog__empty">{t("noProducts")}</p>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-10">
+            <div className="catalog__grid">
               {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}

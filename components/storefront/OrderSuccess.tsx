@@ -27,7 +27,7 @@ export default function OrderSuccess({
         <div className="order-success__actions">
           <Link href="/shop" className="btn-gold">{t("continueShopping")}</Link>
           {signedIn ? (
-            <Link href="/account" className="btn-outline-black">{t("viewYourOrders")}</Link>
+            <Link href="/account/orders" className="btn-outline-black">{t("viewYourOrders")}</Link>
           ) : null}
         </div>
       </div>
