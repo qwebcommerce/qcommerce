@@ -8,11 +8,13 @@ import AdminSelect from "@/components/admin/AdminSelect";
 import { deleteExpenseAction } from "@/lib/actions";
 import {
   EXPENSE_CATEGORIES,
+  EXPENSE_SUBCATEGORIES,
   expenseCategoryKey,
   expenseFileDownloadPath,
   expenseSubcategoryKey,
   formatExpenseDate,
   formatFileSize,
+  isExpenseCategory,
 } from "@/lib/expenses";
 import { formatQar } from "@/lib/format";
 import { usePreferences } from "@/lib/preferences";
@@ -27,19 +29,30 @@ export default function ExpensesManager({ expenses }: { expenses: Expense[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [subcategoryFilter, setSubcategoryFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [pending, startTransition] = useTransition();
   const [deleting, setDeleting] = useState<Expense | null>(null);
   const [error, setError] = useState("");
 
+  const subcategoryOptions = useMemo(() => {
+    const ids = isExpenseCategory(categoryFilter)
+      ? [...EXPENSE_SUBCATEGORIES[categoryFilter]]
+      : Array.from(new Set(EXPENSE_CATEGORIES.flatMap((category) => [...EXPENSE_SUBCATEGORIES[category]])));
+    return ids;
+  }, [categoryFilter]);
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
     return expenses.filter((expense) => {
       if (categoryFilter !== "all" && expense.category !== categoryFilter) return false;
+      if (subcategoryFilter !== "all" && expense.subcategory !== subcategoryFilter) return false;
       if (!needle) return true;
       const haystack = [
         formatQar(expense.amount),
         String(expense.amount),
+        formatExpenseDate(expense.incurredOn, locale),
+        expense.incurredOn,
         t(expenseCategoryKey(expense.category)),
         t(expenseSubcategoryKey(expense.subcategory)),
         expense.notes,
@@ -49,7 +62,7 @@ export default function ExpensesManager({ expenses }: { expenses: Expense[] }) {
         .toLowerCase();
       return haystack.includes(needle);
     });
-  }, [expenses, query, categoryFilter, t]);
+  }, [expenses, query, categoryFilter, subcategoryFilter, t, locale]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -59,7 +72,13 @@ export default function ExpensesManager({ expenses }: { expenses: Expense[] }) {
 
   useEffect(() => {
     setPage(1);
-  }, [query, categoryFilter]);
+  }, [query, categoryFilter, subcategoryFilter]);
+
+  useEffect(() => {
+    if (subcategoryFilter !== "all" && !subcategoryOptions.includes(subcategoryFilter)) {
+      setSubcategoryFilter("all");
+    }
+  }, [subcategoryFilter, subcategoryOptions]);
 
   useEffect(() => {
     if (page > pageCount) setPage(pageCount);
@@ -111,13 +130,27 @@ export default function ExpensesManager({ expenses }: { expenses: Expense[] }) {
             />
           </label>
           <AdminSelect
+            className="admin-filter"
             value={categoryFilter}
             aria-label={t("expenseCategory")}
             options={[
               { value: "all", label: t("allCategories") },
               ...EXPENSE_CATEGORIES.map((item) => ({ value: item, label: t(expenseCategoryKey(item)) })),
             ]}
-            onChange={setCategoryFilter}
+            onChange={(value) => {
+              setCategoryFilter(value);
+              setSubcategoryFilter("all");
+            }}
+          />
+          <AdminSelect
+            className="admin-filter"
+            value={subcategoryFilter}
+            aria-label={t("expenseSubcategory")}
+            options={[
+              { value: "all", label: t("allSubcategories") },
+              ...subcategoryOptions.map((item) => ({ value: item, label: t(expenseSubcategoryKey(item)) })),
+            ]}
+            onChange={setSubcategoryFilter}
           />
         </div>
       ) : null}

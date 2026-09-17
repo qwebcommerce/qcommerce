@@ -374,6 +374,7 @@ export const en = {
   expenseRemoveFile: "Remove",
   expenseNoFiles: "No files",
   allCategories: "All categories",
+  allSubcategories: "All sub-categories",
   deleteExpenseTitle: "Delete expense",
   confirmDeleteExpense: "Delete this {amount} expense? Attached files will be removed too.",
   toastExpenseCreated: "Expense saved",

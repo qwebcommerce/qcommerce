@@ -376,6 +376,7 @@ export const ar: typeof en = {
   expenseRemoveFile: "إزالة",
   expenseNoFiles: "لا توجد ملفات",
   allCategories: "كل الفئات",
+  allSubcategories: "كل الفئات الفرعية",
   deleteExpenseTitle: "حذف المصروف",
   confirmDeleteExpense: "حذف هذا المصروف بقيمة {amount}؟ ستُحذف الملفات المرفقة أيضاً.",
   toastExpenseCreated: "تم حفظ المصروف",
