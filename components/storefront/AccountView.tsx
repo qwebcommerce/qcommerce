@@ -10,8 +10,10 @@ import { useToast } from "@/lib/toast";
 import {
   composeGulfPhone,
   GULF_DIALS,
+  gulfDialForCode,
   parseGulfPhone,
   splitGulfPhone,
+  type GulfDial,
 } from "@/lib/validation";
 import type { Order } from "@/types";
 
@@ -127,12 +129,12 @@ function AccountProfileForm({ customer }: { customer: ProfileCustomer }) {
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const initial = splitGulfPhone(customer.phone);
-  const [phoneCode, setPhoneCode] = useState(initial.code);
+  const [phoneCode, setPhoneCode] = useState<GulfDial["code"]>(gulfDialForCode(initial.code).code);
   const [phoneLocal, setPhoneLocal] = useState(initial.local);
 
   useEffect(() => {
     const parsed = splitGulfPhone(customer.phone);
-    setPhoneCode(parsed.code);
+    setPhoneCode(gulfDialForCode(parsed.code).code);
     setPhoneLocal(parsed.local);
   }, [customer.phone]);
 
@@ -177,7 +179,7 @@ function AccountProfileForm({ customer }: { customer: ProfileCustomer }) {
             name="phoneCode"
             className="field-select"
             value={phoneCode}
-            onChange={(event) => setPhoneCode(event.target.value)}
+            onChange={(event) => setPhoneCode(gulfDialForCode(event.target.value).code)}
             aria-label={t("phone")}
           >
             {GULF_DIALS.map((item) => (
@@ -202,7 +204,7 @@ function AccountProfileForm({ customer }: { customer: ProfileCustomer }) {
               const raw = event.target.value;
               const parsed = parseGulfPhone(raw);
               if (parsed) {
-                setPhoneCode(parsed.code);
+                setPhoneCode(gulfDialForCode(parsed.code).code);
                 setPhoneLocal(parsed.local);
                 return;
               }

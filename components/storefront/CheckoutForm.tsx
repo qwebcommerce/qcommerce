@@ -12,10 +12,12 @@ import { useToast } from "@/lib/toast";
 import {
   composeGulfPhone,
   GULF_DIALS,
+  gulfDialForCode,
   gulfDialForCountry,
   isValidEmail,
   parseGulfPhone,
   splitGulfPhone,
+  type GulfDial,
 } from "@/lib/validation";
 import { theme } from "@/theme.config";
 
@@ -64,7 +66,7 @@ export default function CheckoutForm({ customer }: { customer: CheckoutCustomer 
   const [pending, setPending] = useState(false);
   const [draft, setDraft] = useState<Draft>({});
   const [formKey, setFormKey] = useState("boot");
-  const [phoneCode, setPhoneCode] = useState(GULF_DIALS[0].code);
+  const [phoneCode, setPhoneCode] = useState<GulfDial["code"]>(GULF_DIALS[0].code);
   const [phoneLocal, setPhoneLocal] = useState("");
   const [promoInput, setPromoInput] = useState("");
   const [promoBusy, setPromoBusy] = useState(false);
@@ -79,7 +81,7 @@ export default function CheckoutForm({ customer }: { customer: CheckoutCustomer 
       next.country || theme.commerce.checkoutCountries[0],
     );
     setDraft(next);
-    setPhoneCode(parsed.code);
+    setPhoneCode(gulfDialForCode(parsed.code).code);
     setPhoneLocal(parsed.local);
     setFormKey("ready");
   }, [customer]);
@@ -239,7 +241,7 @@ export default function CheckoutForm({ customer }: { customer: CheckoutCustomer 
             <select
               className="admin-select"
               value={phoneCode}
-              onChange={(event) => setPhoneCode(event.target.value)}
+              onChange={(event) => setPhoneCode(gulfDialForCode(event.target.value).code)}
               aria-label={t("phone")}
             >
               {GULF_DIALS.map((dial) => (
@@ -256,7 +258,7 @@ export default function CheckoutForm({ customer }: { customer: CheckoutCustomer 
                 const raw = event.target.value;
                 const parsed = parseGulfPhone(raw);
                 if (parsed) {
-                  setPhoneCode(parsed.code);
+                  setPhoneCode(gulfDialForCode(parsed.code).code);
                   setPhoneLocal(parsed.local);
                   return;
                 }
