@@ -12,6 +12,7 @@ const NAV = [
   { href: "/admin", key: "dashboard" as const, icon: DashboardIcon },
   { href: "/admin/products", key: "productsNav" as const, icon: ProductsIcon },
   { href: "/admin/orders", key: "ordersNav" as const, icon: OrdersIcon },
+  { href: "/admin/expenses", key: "expensesNav" as const, icon: ExpensesIcon },
   { href: "/admin/customers", key: "customersNav" as const, icon: CustomersIcon },
   { href: "/admin/categories", key: "categoriesNav" as const, icon: CategoriesIcon },
   { href: "/admin/settings", key: "settingsNav" as const, icon: SettingsIcon },
@@ -176,6 +177,15 @@ function OrdersIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M7 7h10M7 12h10M7 17h6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       <rect x="4" y="3.5" width="16" height="17" rx="2.2" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function ExpensesIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="4.5" y="3.5" width="15" height="17" rx="2" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   );
 }

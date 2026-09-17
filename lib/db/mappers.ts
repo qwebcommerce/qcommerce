@@ -2,6 +2,9 @@ import type {
   Category,
   Customer,
   CustomerStatus,
+  Expense,
+  ExpenseCategory,
+  ExpenseFile,
   Order,
   OrderItem,
   PaymentStatus,
@@ -197,5 +200,46 @@ export function productToRow(product: Partial<Product>) {
     has_variants: product.hasVariants ?? false,
     variants: product.variants ?? [],
     status: product.status,
+  };
+}
+
+type ExpenseRow = {
+  id: string;
+  amount: number | string;
+  incurred_on: string;
+  category: string;
+  subcategory: string;
+  notes: string | null;
+  files: unknown;
+  created_at: string;
+};
+
+function mapExpenseFile(raw: unknown): ExpenseFile | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  const id = String(row.id ?? "").trim();
+  const path = String(row.path ?? "").trim();
+  const name = String(row.name ?? "").trim();
+  if (!id || !path || !name) return null;
+  return {
+    id,
+    path,
+    name,
+    size: Number(row.size) || 0,
+    type: String(row.type || "application/octet-stream"),
+  };
+}
+
+export function mapExpense(row: ExpenseRow): Expense {
+  const files = Array.isArray(row.files) ? row.files.map(mapExpenseFile).filter((file): file is ExpenseFile => Boolean(file)) : [];
+  return {
+    id: row.id,
+    amount: Number(row.amount) || 0,
+    incurredOn: String(row.incurred_on).slice(0, 10),
+    category: (row.category as ExpenseCategory) || "shop",
+    subcategory: row.subcategory,
+    notes: row.notes ?? "",
+    files,
+    createdAt: row.created_at,
   };
 }

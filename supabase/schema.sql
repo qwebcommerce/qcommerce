@@ -202,3 +202,44 @@ drop policy if exists "category_images_public_read" on storage.objects;
 create policy "category_images_public_read"
   on storage.objects for select
   using (bucket_id = 'category-images');
+
+create table if not exists public.expenses (
+  id uuid primary key default gen_random_uuid(),
+  amount numeric(12,2) not null,
+  incurred_on date not null default current_date,
+  category text not null check (category in ('home', 'shop', 'salary', 'marketing')),
+  subcategory text not null,
+  notes text not null default '',
+  files jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.expenses enable row level security;
+create index if not exists expenses_incurred_on_idx on public.expenses (incurred_on desc, created_at desc);
+grant all on table public.expenses to postgres, service_role;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'expense-documents',
+  'expense-documents',
+  false,
+  10485760,
+  array[
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/avif',
+    'application/pdf',
+    'text/csv',
+    'text/plain',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  ]
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;

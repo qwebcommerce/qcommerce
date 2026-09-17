@@ -5,9 +5,11 @@ import { redirect } from "next/navigation";
 import {
   addNewsletter,
   createCustomer,
+  createExpense,
   createOrder,
   createProduct,
   deleteCategory,
+  deleteExpense,
   deleteProduct,
   emailHasUsedPromo,
   getCategoryById,
@@ -16,6 +18,7 @@ import {
   getStoreSettings,
   listCategories,
   updateCustomer,
+  updateExpense,
   updateOrder,
   updateProduct,
   updateStoreSettings,
@@ -33,12 +36,14 @@ import {
   setCustomerSession,
 } from "@/lib/auth";
 import { mapVariants } from "@/lib/db/mappers";
+import { isValidExpensePair, MAX_EXPENSE_FILES, todayIsoDate } from "@/lib/expenses";
 import { normalizePromo, promoIsActive } from "@/lib/format";
 import { productStock } from "@/lib/products";
-import { removeStoredImage, uploadCategoryImage } from "@/lib/storage";
+import { removeExpenseFile, removeStoredImage, uploadCategoryImage, uploadExpenseFile } from "@/lib/storage";
 import { composeGulfPhone, isValidEmail, parseGulfPhone } from "@/lib/validation";
 import type {
   CustomerStatus,
+  ExpenseFile,
   OrderItem,
   OrderStatus,
   PaymentMethod,
@@ -418,4 +423,80 @@ export async function saveStoreSettingsAction(formData: FormData) {
   revalidatePath("/checkout");
   revalidatePath("/admin/settings");
   return { ok: true as const };
+}
+
+function parseExpenseFiles(raw: string): ExpenseFile[] {
+  try {
+    const parsed = JSON.parse(raw || "[]") as ExpenseFile[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((file) => file && typeof file === "object" && file.id && file.path && file.name)
+      .slice(0, MAX_EXPENSE_FILES)
+      .map((file) => ({
+        id: String(file.id),
+        path: String(file.path),
+        name: String(file.name),
+        size: Number(file.size) || 0,
+        type: String(file.type || "application/octet-stream"),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+export async function uploadExpenseFileAction(formData: FormData) {
+  await requireAdmin();
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size <= 0) return { error: "Choose a file to upload." };
+  try {
+    const uploaded = await uploadExpenseFile(file);
+    return { ok: true as const, file: uploaded };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not upload file." };
+  }
+}
+
+export async function removeExpenseFileAction(formData: FormData) {
+  await requireAdmin();
+  const path = formString(formData, "path");
+  try {
+    await removeExpenseFile(path);
+    return { ok: true as const };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not remove file." };
+  }
+}
+
+export async function saveExpenseAction(formData: FormData) {
+  await requireAdmin();
+  const id = formString(formData, "id");
+  const amount = Number(formString(formData, "amount"));
+  const incurredOn = formString(formData, "incurredOn") || todayIsoDate();
+  const category = formString(formData, "category");
+  const subcategory = formString(formData, "subcategory");
+  const notes = formString(formData, "notes");
+  const files = parseExpenseFiles(formString(formData, "files"));
+  if (!Number.isFinite(amount) || amount <= 0) return { error: "Enter an amount greater than 0." };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(incurredOn)) return { error: "Enter a valid date." };
+  if (!isValidExpensePair(category, subcategory)) return { error: "Choose a valid category and sub-category." };
+  try {
+    const payload = { amount, incurredOn, category, subcategory, notes, files };
+    if (id) await updateExpense(id, payload);
+    else await createExpense(payload);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not save expense." };
+  }
+  revalidatePath("/admin/expenses");
+  return { ok: true as const };
+}
+
+export async function deleteExpenseAction(formData: FormData) {
+  await requireAdmin();
+  try {
+    await deleteExpense(formString(formData, "id"));
+    revalidatePath("/admin/expenses");
+    return { ok: true as const };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not delete expense." };
+  }
 }

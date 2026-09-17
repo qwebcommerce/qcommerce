@@ -133,3 +133,143 @@ export async function removeStoredImage(url: string | null | undefined) {
     throw new Error(detail || "Could not remove image.");
   }
 }
+
+export const EXPENSE_FILE_BUCKET = "expense-documents";
+export const MAX_EXPENSE_FILE_BYTES = 10 * 1024 * 1024;
+export const EXPENSE_FILE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+  "application/pdf",
+  "text/csv",
+  "text/plain",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+] as const;
+
+const EXPENSE_EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/avif": "avif",
+  "application/pdf": "pdf",
+  "text/csv": "csv",
+  "text/plain": "txt",
+  "application/msword": "doc",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+  "application/vnd.ms-excel": "xls",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+};
+
+const EXPENSE_EXT_TYPES: Record<string, (typeof EXPENSE_FILE_TYPES)[number]> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  avif: "image/avif",
+  pdf: "application/pdf",
+  csv: "text/csv",
+  txt: "text/plain",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+};
+
+function sniffExpenseType(bytes: Uint8Array, file: File): (typeof EXPENSE_FILE_TYPES)[number] | null {
+  const image = sniffImageType(bytes);
+  if (image) return image;
+  if (bytes.length >= 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
+    return "application/pdf";
+  }
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const fromName = EXPENSE_EXT_TYPES[ext];
+  if (fromName) return fromName;
+  if ((EXPENSE_FILE_TYPES as readonly string[]).includes(file.type)) {
+    return file.type as (typeof EXPENSE_FILE_TYPES)[number];
+  }
+  return null;
+}
+
+async function ensureExpenseFileBucket() {
+  const existing = await storageFetch(`/bucket/${EXPENSE_FILE_BUCKET}`);
+  if (existing.ok) return;
+  const created = await storageFetch("/bucket", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: EXPENSE_FILE_BUCKET,
+      name: EXPENSE_FILE_BUCKET,
+      public: false,
+      file_size_limit: MAX_EXPENSE_FILE_BYTES,
+      allowed_mime_types: EXPENSE_FILE_TYPES,
+    }),
+  });
+  if (!created.ok && created.status !== 409) {
+    const detail = await created.text();
+    throw new Error(detail || "Could not create expense storage.");
+  }
+}
+
+export async function uploadExpenseFile(file: File) {
+  if (file.size <= 0) throw new Error("Choose a file to upload.");
+  if (file.size > MAX_EXPENSE_FILE_BYTES) throw new Error("File must be 10 MB or smaller.");
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const type = sniffExpenseType(bytes, file);
+  if (!type) throw new Error("That file type is not allowed.");
+  await ensureExpenseFileBucket();
+  const ext = EXPENSE_EXTENSIONS[type] || file.name.split(".").pop()?.toLowerCase() || "bin";
+  const id = crypto.randomUUID();
+  const objectPath = `expenses/${id}.${ext}`;
+  const uploaded = await storageFetch(`/object/${EXPENSE_FILE_BUCKET}/${objectPath}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": type,
+      "x-upsert": "true",
+      "cache-control": "private, max-age=3600",
+    },
+    body: bytes,
+  });
+  if (!uploaded.ok) {
+    const detail = await uploaded.text();
+    throw new Error(detail || "Could not upload file.");
+  }
+  return {
+    id,
+    path: objectPath,
+    name: file.name.replace(/[\r\n"]/g, "").slice(0, 180) || `file.${ext}`,
+    size: file.size,
+    type,
+  };
+}
+
+export async function removeExpenseFile(path: string | null | undefined) {
+  if (!path || path.includes("..") || !path.startsWith("expenses/")) return;
+  const response = await storageFetch(`/object/${EXPENSE_FILE_BUCKET}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prefixes: [path] }),
+  });
+  if (!response.ok && response.status !== 404) {
+    const detail = await response.text();
+    throw new Error(detail || "Could not remove file.");
+  }
+}
+
+export async function fetchExpenseFile(path: string) {
+  if (!path || path.includes("..") || !path.startsWith("expenses/")) {
+    throw new Error("Invalid file path.");
+  }
+  const response = await storageFetch(`/object/${EXPENSE_FILE_BUCKET}/${path}`);
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(detail || "Could not read file.");
+  }
+  return response;
+}

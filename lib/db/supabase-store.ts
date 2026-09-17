@@ -3,9 +3,9 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { DEFAULT_STORE_SETTINGS, promoDiscount, promoIsActive, shippingFor, slugify, normalizePromo } from "@/lib/format";
 import { hashPassword } from "@/lib/password";
 import { slugsForCategory } from "@/lib/categories";
-import { mapCategory, mapCustomer, mapOrder, mapProduct, productToRow } from "@/lib/db/mappers";
+import { mapCategory, mapCustomer, mapExpense, mapOrder, mapProduct, productToRow } from "@/lib/db/mappers";
 import { productIsLowStock } from "@/lib/products";
-import { removeStoredImage } from "@/lib/storage";
+import { removeExpenseFile, removeStoredImage } from "@/lib/storage";
 import type {
   Category,
   CategoryInput,
@@ -13,6 +13,8 @@ import type {
   CustomerInput,
   CustomerStatus,
   DashboardStats,
+  Expense,
+  ExpenseInput,
   NewsletterEntry,
   Order,
   OrderInput,
@@ -480,4 +482,73 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     pendingOrders: orders.filter((o) => o.status === "pending").length,
     lowStock: products.filter((p) => productIsLowStock(p)).length,
   };
+}
+
+export async function listExpenses(): Promise<Expense[]> {
+  const sb = client();
+  const { data, error } = await sb.from("expenses").select("*").order("incurred_on", { ascending: false }).order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map(mapExpense);
+}
+
+export async function getExpenseById(id: string): Promise<Expense | null> {
+  const sb = client();
+  const { data, error } = await sb.from("expenses").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data ? mapExpense(data) : null;
+}
+
+export async function createExpense(input: ExpenseInput): Promise<Expense> {
+  const sb = client();
+  const { data, error } = await sb
+    .from("expenses")
+    .insert({
+      amount: input.amount,
+      incurred_on: input.incurredOn,
+      category: input.category,
+      subcategory: input.subcategory,
+      notes: input.notes ?? "",
+      files: input.files ?? [],
+    })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return mapExpense(data);
+}
+
+export async function updateExpense(id: string, input: ExpenseInput): Promise<Expense> {
+  const sb = client();
+  const previous = await getExpenseById(id);
+  const { data, error } = await sb
+    .from("expenses")
+    .update({
+      amount: input.amount,
+      incurred_on: input.incurredOn,
+      category: input.category,
+      subcategory: input.subcategory,
+      notes: input.notes ?? "",
+      files: input.files ?? [],
+    })
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  const next = mapExpense(data);
+  const keep = new Set(next.files.map((file) => file.path));
+  if (previous) {
+    for (const file of previous.files) {
+      if (!keep.has(file.path)) await removeExpenseFile(file.path);
+    }
+  }
+  return next;
+}
+
+export async function deleteExpense(id: string): Promise<void> {
+  const previous = await getExpenseById(id);
+  const sb = client();
+  const { error } = await sb.from("expenses").delete().eq("id", id);
+  if (error) throw error;
+  if (previous) {
+    for (const file of previous.files) await removeExpenseFile(file.path);
+  }
 }

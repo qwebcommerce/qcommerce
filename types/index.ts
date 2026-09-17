@@ -213,3 +213,33 @@ export type StoreSettings = {
   promoCode: string;
   promoPercent: number;
 };
+
+export type ExpenseCategory = "home" | "shop" | "salary" | "marketing";
+
+export type ExpenseFile = {
+  id: string;
+  path: string;
+  name: string;
+  size: number;
+  type: string;
+};
+
+export type Expense = {
+  id: string;
+  amount: number;
+  incurredOn: string;
+  category: ExpenseCategory;
+  subcategory: string;
+  notes: string;
+  files: ExpenseFile[];
+  createdAt: string;
+};
+
+export type ExpenseInput = {
+  amount: number;
+  incurredOn: string;
+  category: ExpenseCategory;
+  subcategory: string;
+  notes?: string;
+  files?: ExpenseFile[];
+};

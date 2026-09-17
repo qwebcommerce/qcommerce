@@ -7,6 +7,8 @@ import type {
   CustomerInput,
   CustomerStatus,
   DashboardStats,
+  Expense,
+  ExpenseInput,
   NewsletterEntry,
   Order,
   OrderInput,
@@ -134,4 +136,24 @@ export async function updateStoreSettings(input: StoreSettings): Promise<StoreSe
 
 export async function emailHasUsedPromo(email: string, code: string): Promise<boolean> {
   return supabaseStore.emailHasUsedPromo(email, code);
+}
+
+export async function listExpenses(): Promise<Expense[]> {
+  return supabaseStore.listExpenses();
+}
+
+export async function getExpenseById(id: string): Promise<Expense | null> {
+  return supabaseStore.getExpenseById(id);
+}
+
+export async function createExpense(input: ExpenseInput): Promise<Expense> {
+  return supabaseStore.createExpense(input);
+}
+
+export async function updateExpense(id: string, input: ExpenseInput): Promise<Expense> {
+  return supabaseStore.updateExpense(id, input);
+}
+
+export async function deleteExpense(id: string): Promise<void> {
+  return supabaseStore.deleteExpense(id);
 }
