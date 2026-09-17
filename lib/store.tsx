@@ -11,11 +11,13 @@ type UiState = {
   setCartOpen: (open: boolean) => void;
 };
 
+type CartAddExtras = { size?: string; color?: string; quantity?: number; variantId?: string };
+
 type CartState = {
   items: CartLine[];
   count: number;
   subtotal: number;
-  add: (product: Product, extras?: { size?: string; color?: string; quantity?: number }) => void;
+  add: (product: Product, extras?: CartAddExtras) => void;
   update: (id: string, quantity: number) => void;
   remove: (id: string) => void;
   clear: () => void;
@@ -77,7 +79,7 @@ export function StoreProviders({ children }: { children: React.ReactNode }) {
     [searchOpen, cartOpen],
   );
 
-  const add = useCallback((product: Product, extras?: { size?: string; color?: string; quantity?: number; variantId?: string }) => {
+  const add = useCallback((product: Product, extras?: CartAddExtras) => {
     const size = extras?.size;
     const color = extras?.color;
     const quantity = extras?.quantity ?? 1;

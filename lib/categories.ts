@@ -1,5 +1,5 @@
 import type { Category } from "@/types";
-import { theme, type Locale } from "@/theme.config";
+import { themeCategoryName, type Locale } from "@/theme.config";
 
 export type CategoryTree = Category & { children: Category[] };
 
@@ -35,7 +35,7 @@ export function categoryPathLabel(categories: Category[], slug: string, fallback
 }
 
 export function localizedCategoryName(category: Pick<Category, "name" | "nameAr" | "slug">, locale: Locale) {
-  if (locale === "ar") return category.nameAr || theme.categoryNames[category.slug]?.ar || category.name;
+  if (locale === "ar") return category.nameAr || themeCategoryName(category.slug)?.ar || category.name;
   return category.name;
 }
 

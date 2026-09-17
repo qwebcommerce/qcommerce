@@ -1,6 +1,6 @@
 import { ar } from "@/lib/i18n/ar";
 import { en } from "@/lib/i18n/en";
-import { loc, theme, type Locale } from "@/theme.config";
+import { loc, themeCategoryName, type Locale } from "@/theme.config";
 
 export type MessageKey = keyof typeof en;
 
@@ -21,6 +21,6 @@ export function translate(locale: Locale, key: MessageKey, vars?: Record<string,
 }
 
 export function categoryLabel(locale: Locale, slug: string, fallback: string) {
-  const named = theme.categoryNames[slug];
+  const named = themeCategoryName(slug);
   return named ? loc(named, locale) : fallback;
 }

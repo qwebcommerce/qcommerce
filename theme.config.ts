@@ -181,6 +181,10 @@ export const theme = {
   } satisfies Record<string, Localized>,
 };
 
+export function themeCategoryName(slug: string): Localized | undefined {
+  return (theme.categoryNames as Record<string, Localized | undefined>)[slug];
+}
+
 export function loc(value: Localized, locale: Locale): string {
   return value[locale] || value.en;
 }
