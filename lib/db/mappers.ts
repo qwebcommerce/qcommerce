@@ -12,6 +12,7 @@ import type {
   ProductBadge,
   ProductVariant,
 } from "@/types";
+import { mapShipments, normalizeProductSource } from "@/lib/dropship";
 
 type ProductRow = {
   id: string;
@@ -33,6 +34,10 @@ type ProductRow = {
   has_variants?: boolean | null;
   variants?: unknown;
   status: "active" | "draft";
+  source?: string | null;
+  supplier_url?: string | null;
+  supplier_product_id?: string | null;
+  supplier_stock?: number | null;
   created_at: string;
 };
 
@@ -62,6 +67,7 @@ type OrderRow = {
   total: number;
   shipping_address: Order["shippingAddress"];
   notes: string | null;
+  shipments?: unknown;
   created_at: string;
 };
 
@@ -119,6 +125,10 @@ export function mapProduct(row: ProductRow): Product {
     hasVariants: Boolean(row.has_variants) || variants.length > 0,
     variants,
     status: row.status,
+    source: normalizeProductSource(row.source),
+    supplierUrl: row.supplier_url ?? "",
+    supplierProductId: row.supplier_product_id ?? "",
+    supplierStock: Number(row.supplier_stock ?? row.stock ?? 0),
     createdAt: row.created_at,
   };
 }
@@ -163,6 +173,7 @@ export function mapOrder(row: OrderRow): Order {
     shippingAddress: address,
     paymentMethod: address.paymentMethod === "cod" ? "cod" : "cod",
     notes: row.notes ?? "",
+    shipments: mapShipments(row.shipments),
     createdAt: row.created_at,
   };
 }
@@ -200,6 +211,10 @@ export function productToRow(product: Partial<Product>) {
     has_variants: product.hasVariants ?? false,
     variants: product.variants ?? [],
     status: product.status,
+    source: product.source ?? "warehouse",
+    supplier_url: product.supplierUrl ?? "",
+    supplier_product_id: product.supplierProductId ?? "",
+    supplier_stock: product.supplierStock ?? product.stock ?? 0,
   };
 }
 

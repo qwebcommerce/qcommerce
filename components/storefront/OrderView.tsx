@@ -69,7 +69,15 @@ export default function OrderView({ order, placed }: { order: Order; placed?: bo
           <p className="account-ship-block">
             <strong>{order.customerName}</strong>
             <span>
-              {order.shippingAddress.line1}, {order.shippingAddress.city}, {order.shippingAddress.country}
+              {[
+                order.shippingAddress.line1,
+                order.shippingAddress.area,
+                order.shippingAddress.city,
+                order.shippingAddress.postalCode,
+                order.shippingAddress.country,
+              ]
+                .filter(Boolean)
+                .join(", ")}
             </span>
             <span>
               {t("paymentMethod")}: {t("cashOnDelivery")}

@@ -147,6 +147,17 @@ create table if not exists public.store_settings (
 alter table public.store_settings add column if not exists return_days int not null default 14;
 alter table public.store_settings add column if not exists promo_code text not null default 'VB20';
 alter table public.store_settings add column if not exists promo_percent numeric(5,2) not null default 20;
+alter table public.store_settings add column if not exists dropship_enabled boolean not null default false;
+alter table public.store_settings add column if not exists dropship_buffer int not null default 3;
+
+alter table public.products add column if not exists source text not null default 'warehouse';
+alter table public.products drop constraint if exists products_source_check;
+alter table public.products add constraint products_source_check check (source in ('warehouse', 'aliexpress', 'temu'));
+alter table public.products add column if not exists supplier_url text not null default '';
+alter table public.products add column if not exists supplier_product_id text not null default '';
+alter table public.products add column if not exists supplier_stock int not null default 0;
+
+alter table public.orders add column if not exists shipments jsonb not null default '[]'::jsonb;
 
 insert into public.store_settings (id, free_shipping_from, shipping_fee, return_days, promo_code, promo_percent)
 values ('store', 500, 25, 14, 'VB20', 20)

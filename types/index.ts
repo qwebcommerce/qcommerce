@@ -1,5 +1,8 @@
 export type ProductBadge = "NEW" | "SALE" | "BESTSELLER" | "TRENDING" | null;
 export type ProductStatus = "active" | "draft";
+export type ProductSource = "warehouse" | "aliexpress" | "temu";
+export type DropshipSource = "aliexpress" | "temu";
+export type DropshipShipmentStatus = "pending" | "placed" | "failed" | "cancelled";
 export type OrderStatus =
   | "pending"
   | "paid"
@@ -82,6 +85,10 @@ export type Product = {
   hasVariants: boolean;
   variants: ProductVariant[];
   status: ProductStatus;
+  source: ProductSource;
+  supplierUrl: string;
+  supplierProductId: string;
+  supplierStock: number;
   createdAt: string;
 };
 
@@ -96,16 +103,39 @@ export type CartLine = {
   size?: string;
   color?: string;
   variantId?: string;
+  source?: ProductSource;
+  supplierProductId?: string;
+  supplierUrl?: string;
 };
 
 export type OrderItem = Omit<CartLine, "id">;
 
 export type PaymentMethod = "cod";
 
+export type DropshipShipment = {
+  id: string;
+  productId: string;
+  variantId?: string;
+  source: DropshipSource;
+  supplierProductId: string;
+  supplierUrl: string;
+  quantity: number;
+  status: DropshipShipmentStatus;
+  supplierOrderId?: string;
+  trackingNumber?: string;
+  lastError?: string;
+  attempts: number;
+  retryUntil: string;
+  lastAttemptAt?: string;
+  createdAt: string;
+};
+
 export type ShippingAddress = {
   line1: string;
   city: string;
   country: string;
+  postalCode?: string;
+  area?: string;
   phone?: string;
   paymentMethod?: PaymentMethod;
   promoCode?: string;
@@ -131,6 +161,7 @@ export type Order = {
   shippingAddress: ShippingAddress;
   paymentMethod: PaymentMethod;
   notes: string;
+  shipments: DropshipShipment[];
   createdAt: string;
 };
 
@@ -154,7 +185,7 @@ export type NewsletterEntry = {
 export type ProductFilters = {
   category?: string;
   q?: string;
-  sort?: "newest" | "price-asc" | "price-desc" | "name";
+  sort?: "newest" | "oldest" | "price-asc" | "price-desc" | "name" | "name-desc";
   status?: ProductStatus;
 };
 
@@ -177,6 +208,10 @@ export type ProductInput = {
   hasVariants?: boolean;
   variants?: ProductVariant[];
   status: ProductStatus;
+  source?: ProductSource;
+  supplierUrl?: string;
+  supplierProductId?: string;
+  supplierStock?: number;
 };
 
 export type OrderInput = {
@@ -212,6 +247,8 @@ export type StoreSettings = {
   returnDays: number;
   promoCode: string;
   promoPercent: number;
+  dropshipEnabled: boolean;
+  dropshipBuffer: number;
 };
 
 export type ExpenseCategory = "home" | "shop" | "salary" | "marketing";

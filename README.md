@@ -37,6 +37,12 @@ ADMIN_PASSWORD=admin123
 RESEND_API_KEY=re_...
 EMAIL_FROM=Voombaza <onboarding@resend.dev>
 NEXT_PUBLIC_SITE_URL=https://your-store-domain.com
+
+# Optional. Dropshipping stays hidden until the client is ready.
+# ALIEXPRESS_APP_KEY=
+# ALIEXPRESS_APP_SECRET=
+# TEMU_APP_KEY=
+# TEMU_APP_SECRET=
 ```
 
 `npm run db:migrate` applies `supabase/schema.sql` over Postgres (`DB_PASSWORD`) and upserts the catalogue. After that, manage products from `/admin`.

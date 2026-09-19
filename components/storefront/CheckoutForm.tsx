@@ -36,6 +36,8 @@ type Draft = {
   line1?: string;
   city?: string;
   country?: string;
+  postalCode?: string;
+  area?: string;
   notes?: string;
 };
 
@@ -160,10 +162,12 @@ export default function CheckoutForm({ customer }: { customer: CheckoutCustomer 
               line1: String(data.get("line1") ?? ""),
               city: String(data.get("city") ?? ""),
               country: String(data.get("country") ?? ""),
+              postalCode: String(data.get("postalCode") ?? ""),
+              area: String(data.get("area") ?? ""),
               phone,
             },
-            items: items.map(({ productId, name, slug, image, price, quantity, size, color, variantId }) => ({
-              productId, name, slug, image, price, quantity, size, color, variantId,
+            items: items.map(({ productId, name, slug, image, price, quantity, size, color, variantId, source, supplierProductId, supplierUrl }) => ({
+              productId, name, slug, image, price, quantity, size, color, variantId, source, supplierProductId, supplierUrl,
             })),
           });
           setPending(false);

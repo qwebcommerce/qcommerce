@@ -1,5 +1,5 @@
 import ProductsManager from "@/components/admin/ProductsManager";
-import { listAllProducts } from "@/lib/db";
+import { listAllProducts, listCategories } from "@/lib/db";
 
 export const metadata = { title: "Products" };
 
@@ -11,6 +11,6 @@ export default async function AdminProductsPage({
   const params = await searchParams;
   const raw = params.q;
   const initialQuery = (Array.isArray(raw) ? raw[0] : raw)?.trim() ?? "";
-  const products = await listAllProducts();
-  return <ProductsManager products={products} initialQuery={initialQuery} />;
+  const [products, categories] = await Promise.all([listAllProducts(), listCategories()]);
+  return <ProductsManager products={products} categories={categories} initialQuery={initialQuery} />;
 }

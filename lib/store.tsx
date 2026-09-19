@@ -112,6 +112,9 @@ export function StoreProviders({ children }: { children: React.ReactNode }) {
           size: variant?.size || size,
           color: variant?.color || color,
           variantId,
+          source: product.source,
+          supplierProductId: product.supplierProductId,
+          supplierUrl: product.supplierUrl,
         },
       ]);
     }

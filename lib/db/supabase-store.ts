@@ -4,6 +4,7 @@ import { DEFAULT_STORE_SETTINGS, promoDiscount, promoIsActive, shippingFor, slug
 import { hashPassword } from "@/lib/password";
 import { slugsForCategory } from "@/lib/categories";
 import { mapCategory, mapCustomer, mapExpense, mapOrder, mapProduct, productToRow } from "@/lib/db/mappers";
+import { buildShipment, isDropshipSource, isListedOnShop } from "@/lib/dropship";
 import { productIsLowStock } from "@/lib/products";
 import { removeExpenseFile, removeStoredImage } from "@/lib/storage";
 import type {
@@ -18,6 +19,7 @@ import type {
   NewsletterEntry,
   Order,
   OrderInput,
+  DropshipShipment,
   OrderStatus,
   PaymentStatus,
   Product,
@@ -34,17 +36,22 @@ function parseStoreSettings(row: {
   return_days?: unknown;
   promo_code?: unknown;
   promo_percent?: unknown;
+  dropship_enabled?: unknown;
+  dropship_buffer?: unknown;
 } | null): StoreSettings {
   const freeShippingFrom = Number(row?.free_shipping_from);
   const shippingFee = Number(row?.shipping_fee);
   const returnDays = Number(row?.return_days);
   const promoPercent = Number(row?.promo_percent);
+  const dropshipBuffer = Number(row?.dropship_buffer);
   return {
     freeShippingFrom: Number.isFinite(freeShippingFrom) ? freeShippingFrom : DEFAULT_STORE_SETTINGS.freeShippingFrom,
     shippingFee: Number.isFinite(shippingFee) ? shippingFee : DEFAULT_STORE_SETTINGS.shippingFee,
     returnDays: Number.isFinite(returnDays) && returnDays > 0 ? returnDays : DEFAULT_STORE_SETTINGS.returnDays,
     promoCode: String(row?.promo_code ?? DEFAULT_STORE_SETTINGS.promoCode).trim(),
     promoPercent: Number.isFinite(promoPercent) ? promoPercent : DEFAULT_STORE_SETTINGS.promoPercent,
+    dropshipEnabled: Boolean(row?.dropship_enabled),
+    dropshipBuffer: Number.isFinite(dropshipBuffer) && dropshipBuffer >= 0 ? dropshipBuffer : DEFAULT_STORE_SETTINGS.dropshipBuffer,
   };
 }
 
@@ -79,10 +86,15 @@ export async function listProducts(filters?: ProductFilters): Promise<Product[]>
   if (filters?.sort === "price-asc") query = query.order("price", { ascending: true });
   else if (filters?.sort === "price-desc") query = query.order("price", { ascending: false });
   else if (filters?.sort === "name") query = query.order("name", { ascending: true });
+  else if (filters?.sort === "name-desc") query = query.order("name", { ascending: false });
+  else if (filters?.sort === "oldest") query = query.order("created_at", { ascending: true });
   else query = query.order("created_at", { ascending: false });
   const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []).map(mapProduct);
+  const settings = await getStoreSettings();
+  return (data ?? [])
+    .map(mapProduct)
+    .filter((product) => isListedOnShop(product, settings.dropshipBuffer));
 }
 
 export async function listAllProducts(): Promise<Product[]> {
@@ -96,7 +108,10 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
   const sb = client();
   const { data, error } = await sb.from("products").select("*").eq("slug", slug).maybeSingle();
   if (error) throw error;
-  return data ? mapProduct(data) : null;
+  if (!data) return null;
+  const product = mapProduct(data);
+  const settings = await getStoreSettings();
+  return isListedOnShop(product, settings.dropshipBuffer) ? product : null;
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
@@ -117,6 +132,10 @@ export async function createProduct(input: ProductInput): Promise<Product> {
     badge: input.badge ?? null,
     hasVariants: input.hasVariants ?? false,
     variants: input.variants ?? [],
+    source: input.source ?? "warehouse",
+    supplierUrl: input.supplierUrl ?? "",
+    supplierProductId: input.supplierProductId ?? "",
+    supplierStock: input.supplierStock ?? input.stock,
   });
   const { data, error } = await sb.from("products").insert(row).select("*").single();
   if (error) throw error;
@@ -145,6 +164,10 @@ export async function updateProduct(id: string, input: Partial<ProductInput>): P
   if (input.hasVariants !== undefined) patch.has_variants = input.hasVariants;
   if (input.variants !== undefined) patch.variants = input.variants;
   if (input.status !== undefined) patch.status = input.status;
+  if (input.source !== undefined) patch.source = input.source;
+  if (input.supplierUrl !== undefined) patch.supplier_url = input.supplierUrl;
+  if (input.supplierProductId !== undefined) patch.supplier_product_id = input.supplierProductId;
+  if (input.supplierStock !== undefined) patch.supplier_stock = input.supplierStock;
   const { data, error } = await sb.from("products").update(patch).eq("id", id).select("*").single();
   if (error) throw error;
   return mapProduct(data);
@@ -295,6 +318,8 @@ export async function updateStoreSettings(input: StoreSettings): Promise<StoreSe
         return_days: input.returnDays,
         promo_code: input.promoCode,
         promo_percent: input.promoPercent,
+        dropship_enabled: input.dropshipEnabled,
+        dropship_buffer: input.dropshipBuffer,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "id" },
@@ -356,6 +381,8 @@ export async function createOrder(input: OrderInput): Promise<Order> {
       line1: input.shippingAddress.line1,
       city: input.shippingAddress.city,
       country: input.shippingAddress.country,
+      postalCode: input.shippingAddress.postalCode ?? "",
+      area: input.shippingAddress.area ?? "",
       phone: input.shippingAddress.phone ?? "",
       paymentMethod: input.paymentMethod ?? input.shippingAddress.paymentMethod ?? "cod",
       promoCode: appliedPromo,
@@ -364,16 +391,18 @@ export async function createOrder(input: OrderInput): Promise<Order> {
       isGuest: !input.customerId,
     },
     notes: input.notes ?? "",
+    shipments: input.items.map((item) => buildShipment(item)).filter((shipment): shipment is NonNullable<typeof shipment> => Boolean(shipment)),
   };
   const { data, error } = await sb.from("orders").insert(row).select("*").single();
   if (error) throw error;
   for (const item of input.items) {
     const { data: product } = await sb
       .from("products")
-      .select("stock, has_variants, variants")
+      .select("stock, has_variants, variants, source, supplier_stock")
       .eq("id", item.productId)
       .maybeSingle();
     if (!product) continue;
+    const dropship = isDropshipSource(String(product.source ?? ""));
     if (product.has_variants && item.variantId) {
       const variants = (Array.isArray(product.variants) ? product.variants : []).map((variant: { id?: string; stock?: number }) =>
         variant.id === item.variantId
@@ -381,9 +410,14 @@ export async function createOrder(input: OrderInput): Promise<Order> {
           : variant,
       );
       const stock = variants.reduce((sum: number, variant: { stock?: number }) => sum + Number(variant.stock ?? 0), 0);
-      await sb.from("products").update({ variants, stock }).eq("id", item.productId);
+      const patch: Record<string, unknown> = { variants, stock };
+      if (dropship) patch.supplier_stock = Math.max(0, Number(product.supplier_stock ?? stock) - item.quantity);
+      await sb.from("products").update(patch).eq("id", item.productId);
     } else {
-      await sb.from("products").update({ stock: Math.max(0, product.stock - item.quantity) }).eq("id", item.productId);
+      const nextStock = Math.max(0, Number(product.stock) - item.quantity);
+      const patch: Record<string, unknown> = { stock: nextStock };
+      if (dropship) patch.supplier_stock = Math.max(0, Number(product.supplier_stock ?? product.stock) - item.quantity);
+      await sb.from("products").update(patch).eq("id", item.productId);
     }
   }
   return mapOrder(data);
@@ -391,12 +425,13 @@ export async function createOrder(input: OrderInput): Promise<Order> {
 
 export async function updateOrder(
   id: string,
-  patch: { status?: OrderStatus; paymentStatus?: PaymentStatus },
+  patch: { status?: OrderStatus; paymentStatus?: PaymentStatus; shipments?: DropshipShipment[] },
 ): Promise<Order> {
   const sb = client();
-  const row: Record<string, string> = {};
+  const row: Record<string, unknown> = {};
   if (patch.status) row.status = patch.status;
   if (patch.paymentStatus) row.payment_status = patch.paymentStatus;
+  if (patch.shipments) row.shipments = patch.shipments;
   if (!Object.keys(row).length) {
     const current = await getOrderById(id);
     if (!current) throw new Error("Order not found");

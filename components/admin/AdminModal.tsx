@@ -7,11 +7,13 @@ export default function AdminModal({
   onClose,
   children,
   footer,
+  wide,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  wide?: boolean;
 }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -29,7 +31,7 @@ export default function AdminModal({
   return (
     <div className="admin-modal-backdrop" onClick={onClose} role="presentation">
       <div
-        className="admin-modal"
+        className={`admin-modal${wide ? " admin-modal--wide" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-modal-title"

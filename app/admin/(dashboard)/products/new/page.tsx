@@ -1,9 +1,9 @@
 import ProductForm from "@/components/admin/ProductForm";
-import { listCategories } from "@/lib/db";
+import { getStoreSettings, listCategories } from "@/lib/db";
 
 export const metadata = { title: "New product" };
 
 export default async function NewProductPage() {
-  const categories = await listCategories();
-  return <ProductForm categories={categories} />;
+  const [categories, settings] = await Promise.all([listCategories(), getStoreSettings()]);
+  return <ProductForm categories={categories} dropshipBuffer={settings.dropshipBuffer} />;
 }

@@ -6,11 +6,13 @@ import { usePathname } from "next/navigation";
 import BrandLogo from "@/components/BrandLogo";
 import TopBar from "@/components/TopBar";
 import { logoutAdminAction } from "@/lib/actions";
+import { DROPSHIP_UI_ENABLED } from "@/lib/dropship";
 import { usePreferences } from "@/lib/preferences";
 
 const NAV = [
   { href: "/admin", key: "dashboard" as const, icon: DashboardIcon },
   { href: "/admin/products", key: "productsNav" as const, icon: ProductsIcon },
+  ...(DROPSHIP_UI_ENABLED ? [{ href: "/admin/dropship", key: "dropshipNav" as const, icon: DropshipIcon }] : []),
   { href: "/admin/orders", key: "ordersNav" as const, icon: OrdersIcon },
   { href: "/admin/expenses", key: "expensesNav" as const, icon: ExpensesIcon },
   { href: "/admin/customers", key: "customersNav" as const, icon: CustomersIcon },
@@ -168,6 +170,17 @@ function ProductsIcon() {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M4.5 8.2 12 4.5l7.5 3.7v7.6L12 19.5 4.5 15.8V8.2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
       <path d="M12 19.5V12M4.5 8.2 12 12l7.5-3.8" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  );
+}
+
+function DropshipIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3.5 7.5h11v9.5H3.5V7.5Z" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M14.5 10.5h4.2L21 13.2v3.8h-6.5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <circle cx="7" cy="18.2" r="1.4" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="17.2" cy="18.2" r="1.4" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   );
 }

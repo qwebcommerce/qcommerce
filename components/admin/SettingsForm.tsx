@@ -3,6 +3,7 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { saveStoreSettingsAction } from "@/lib/actions";
+import { DROPSHIP_UI_ENABLED } from "@/lib/dropship";
 import { usePreferences } from "@/lib/preferences";
 import { useToast } from "@/lib/toast";
 import type { StoreSettings } from "@/types";
@@ -49,6 +50,8 @@ export default function SettingsForm({ settings }: { settings: StoreSettings }) 
   const [returnDays, setReturnDays] = useState(settings.returnDays);
   const [promoCode, setPromoCode] = useState(settings.promoCode);
   const [promoPercent, setPromoPercent] = useState(settings.promoPercent);
+  const [dropshipEnabled, setDropshipEnabled] = useState(settings.dropshipEnabled);
+  const [dropshipBuffer, setDropshipBuffer] = useState(settings.dropshipBuffer);
 
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -117,6 +120,30 @@ export default function SettingsForm({ settings }: { settings: StoreSettings }) 
           </label>
         </div>
         <small className="admin-field-hint">{t("promoHint")}</small>
+        {DROPSHIP_UI_ENABLED ? (
+          <>
+            <p className="admin-kicker">{t("settingsDropship")}</p>
+            <div className="admin-form-grid">
+              <label>
+                <span className="admin-label">{t("dropshipEnabled")}</span>
+                <select
+                  name="dropshipEnabled"
+                  className="admin-select"
+                  value={dropshipEnabled ? "1" : "0"}
+                  onChange={(event) => setDropshipEnabled(event.target.value === "1")}
+                >
+                  <option value="0">{t("dropshipOff")}</option>
+                  <option value="1">{t("dropshipOn")}</option>
+                </select>
+              </label>
+              <label>
+                <span className="admin-label">{t("dropshipBuffer")}</span>
+                <NumericInput name="dropshipBuffer" value={dropshipBuffer} onValue={setDropshipBuffer} />
+              </label>
+            </div>
+            <small className="admin-field-hint">{t("dropshipSettingsHint")}</small>
+          </>
+        ) : null}
         <div className="admin-form-actions">
           <button type="submit" className="btn-gold" disabled={pending}>
             {pending ? t("saving") : t("saveSettings")}

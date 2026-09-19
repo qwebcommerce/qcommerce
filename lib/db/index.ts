@@ -1,5 +1,6 @@
 import "server-only";
 import * as supabaseStore from "@/lib/db/supabase-store";
+import { DEFAULT_STORE_SETTINGS } from "@/lib/format";
 import type {
   Category,
   CategoryInput,
@@ -10,6 +11,7 @@ import type {
   Expense,
   ExpenseInput,
   NewsletterEntry,
+  DropshipShipment,
   Order,
   OrderInput,
   OrderStatus,
@@ -20,8 +22,12 @@ import type {
   StoreSettings,
 } from "@/types";
 
+function emptyOnMissingTable<T>(fallback: T) {
+  return (): T => fallback;
+}
+
 export async function listProducts(filters?: ProductFilters): Promise<Product[]> {
-  return supabaseStore.listProducts(filters);
+  return supabaseStore.listProducts(filters).catch(emptyOnMissingTable([]));
 }
 
 export async function listAllProducts(): Promise<Product[]> {
@@ -49,7 +55,7 @@ export async function deleteProduct(id: string): Promise<void> {
 }
 
 export async function listCategories(): Promise<Category[]> {
-  return supabaseStore.listCategories();
+  return supabaseStore.listCategories().catch(emptyOnMissingTable([]));
 }
 
 export async function getCategoryById(id: string): Promise<Category | null> {
@@ -90,7 +96,7 @@ export async function updateOrderPaymentStatus(id: string, paymentStatus: Paymen
 
 export async function updateOrder(
   id: string,
-  patch: { status?: OrderStatus; paymentStatus?: PaymentStatus },
+  patch: { status?: OrderStatus; paymentStatus?: PaymentStatus; shipments?: DropshipShipment[] },
 ): Promise<Order> {
   return supabaseStore.updateOrder(id, patch);
 }
@@ -127,7 +133,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 }
 
 export async function getStoreSettings(): Promise<StoreSettings> {
-  return supabaseStore.getStoreSettings();
+  return supabaseStore.getStoreSettings().catch(emptyOnMissingTable(DEFAULT_STORE_SETTINGS));
 }
 
 export async function updateStoreSettings(input: StoreSettings): Promise<StoreSettings> {
@@ -139,7 +145,7 @@ export async function emailHasUsedPromo(email: string, code: string): Promise<bo
 }
 
 export async function listExpenses(): Promise<Expense[]> {
-  return supabaseStore.listExpenses();
+  return supabaseStore.listExpenses().catch(emptyOnMissingTable([]));
 }
 
 export async function getExpenseById(id: string): Promise<Expense | null> {

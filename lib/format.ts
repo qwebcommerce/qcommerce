@@ -7,6 +7,8 @@ export const DEFAULT_STORE_SETTINGS: StoreSettings = {
   returnDays: 14,
   promoCode: "VB20",
   promoPercent: 20,
+  dropshipEnabled: false,
+  dropshipBuffer: 3,
 };
 
 export function formatQar(amount: number): string {

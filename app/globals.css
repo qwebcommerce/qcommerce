@@ -1694,7 +1694,10 @@ html[lang="ar"] .pref-toggle--theme .pref-toggle__opt { letter-spacing: 0; }
 .status-pill--processing { background: color-mix(in srgb, #D0893B 18%, var(--surface)); color: #9A5A16; }
 .status-pill--shipped { background: color-mix(in srgb, #3B7CC9 16%, var(--surface)); color: #1E4E86; }
 .status-pill--cancelled, .status-pill--draft, .status-pill--unpaid { background: color-mix(in srgb, var(--muted) 16%, var(--surface)); color: var(--muted); }
-.status-pill--blocked { background: color-mix(in srgb, var(--sale) 16%, var(--surface)); color: var(--sale); }
+.status-pill--blocked, .status-pill--failed { background: color-mix(in srgb, var(--sale) 16%, var(--surface)); color: var(--sale); }
+.status-pill--placed { background: color-mix(in srgb, #3D8B5B 16%, var(--surface)); color: #2F6B4A; }
+.status-pill--warehouse { background: color-mix(in srgb, var(--muted) 12%, var(--surface)); color: var(--muted); }
+.status-pill--aliexpress, .status-pill--temu { background: color-mix(in srgb, #3B7CC9 16%, var(--surface)); color: #1E4E86; }
 [data-theme="dark"] .status-pill--paid,
 [data-theme="dark"] .status-pill--delivered,
 [data-theme="dark"] .status-pill--active { color: #8FCB9B; }
@@ -2452,6 +2455,21 @@ html[lang="ar"] .pref-toggle--theme .pref-toggle__opt { letter-spacing: 0; }
   padding: 1.25rem 1.3rem 1.1rem;
   box-shadow: 0 24px 80px rgba(13, 13, 13, 0.28);
 }
+.admin-modal--wide {
+  width: min(980px, 100%);
+}
+.admin-import-table-wrap {
+  overflow: auto;
+  max-height: 46vh;
+  border: 1px solid var(--sand);
+  border-radius: 0.9rem;
+}
+.admin-import-table { margin: 0; }
+.admin-import-table tr.is-import-error td { background: color-mix(in srgb, var(--sale) 8%, var(--surface)); }
+.admin-import-guide { color: var(--muted); font-size: 0.82rem; }
+.admin-import-guide summary { cursor: pointer; font-weight: 700; color: var(--black); }
+.admin-import-guide ul { margin: 0.7rem 0 0; padding-inline-start: 1.1rem; display: grid; gap: 0.45rem; }
+.admin-import-guide li span { display: block; margin-top: 0.15rem; }
 @keyframes admin-drawer-in {
   from { transform: translateY(-100%); }
   to { transform: translateY(0); }

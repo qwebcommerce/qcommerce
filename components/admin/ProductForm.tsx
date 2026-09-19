@@ -5,12 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProductImagesUpload from "@/components/admin/ProductImagesUpload";
 import { saveProductAction } from "@/lib/actions";
+import { DROPSHIP_UI_ENABLED } from "@/lib/dropship";
 import { nestCategories } from "@/lib/categories";
 import { slugify } from "@/lib/format";
 import { csvList, productStock, syncProductVariants } from "@/lib/products";
 import { usePreferences } from "@/lib/preferences";
 import { useToast } from "@/lib/toast";
-import type { Category, Product, ProductVariant } from "@/types";
+import type { Category, Product, ProductSource, ProductVariant } from "@/types";
 
 function NumericInput({
   name,
@@ -47,7 +48,15 @@ function NumericInput({
   );
 }
 
-export default function ProductForm({ product, categories }: { product?: Product; categories: Category[] }) {
+export default function ProductForm({
+  product,
+  categories,
+  dropshipBuffer = 3,
+}: {
+  product?: Product;
+  categories: Category[];
+  dropshipBuffer?: number;
+}) {
   const { t } = usePreferences();
   const toast = useToast();
   const router = useRouter();
@@ -69,6 +78,8 @@ export default function ProductForm({ product, categories }: { product?: Product
   const [variants, setVariants] = useState<ProductVariant[]>(product?.variants ?? []);
   const [images, setImages] = useState<string[]>(product?.images ?? []);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [source, setSource] = useState<ProductSource>(product?.source ?? "warehouse");
+  const [supplierStock, setSupplierStock] = useState(product?.supplierStock ?? product?.stock ?? 0);
   const selectedId =
     categories.find((category) => category.slug === product?.categorySlug)?.id ?? tree[0]?.id ?? "";
   const sizeList = csvList(sizes);
@@ -102,7 +113,8 @@ export default function ProductForm({ product, categories }: { product?: Product
   function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    if (!images.length && !imageFiles.length) {
+    const status = String(new FormData(event.currentTarget).get("status") ?? "active");
+    if (!images.length && !imageFiles.length && status !== "draft") {
       const message = t("productImageRequired");
       setError(message);
       toast.error(t("toastError"), message);
@@ -268,7 +280,49 @@ export default function ProductForm({ product, categories }: { product?: Product
               <option value="draft">{t("draft")}</option>
             </select>
           </label>
+          {DROPSHIP_UI_ENABLED ? (
+            <label>
+              <span className="admin-label">{t("productSource")}</span>
+              <select
+                name="source"
+                className="admin-select"
+                value={source}
+                onChange={(event) => setSource(event.target.value as ProductSource)}
+              >
+                <option value="warehouse">{t("sourceWarehouse")}</option>
+                <option value="aliexpress">{t("sourceAliexpress")}</option>
+                <option value="temu">{t("sourceTemu")}</option>
+              </select>
+            </label>
+          ) : (
+            <input type="hidden" name="source" value={product?.source ?? "warehouse"} />
+          )}
         </div>
+        {DROPSHIP_UI_ENABLED && source !== "warehouse" ? (
+          <div className="admin-form-grid">
+            <label>
+              <span className="admin-label">{t("supplierUrl")}</span>
+              <input name="supplierUrl" className="admin-input" defaultValue={product?.supplierUrl} />
+            </label>
+            <label>
+              <span className="admin-label">{t("supplierProductId")}</span>
+              <input name="supplierProductId" className="admin-input" defaultValue={product?.supplierProductId} />
+            </label>
+            <label>
+              <span className="admin-label">{t("supplierStock")}</span>
+              <NumericInput name="supplierStock" value={supplierStock} onValue={setSupplierStock} />
+              <small className="admin-field-hint">
+                {t("sellableAfterBuffer", { count: Math.max(0, supplierStock - dropshipBuffer) })}
+              </small>
+            </label>
+          </div>
+        ) : (
+          <>
+            <input type="hidden" name="supplierUrl" value={product?.supplierUrl ?? ""} />
+            <input type="hidden" name="supplierProductId" value={product?.supplierProductId ?? ""} />
+            <input type="hidden" name="supplierStock" value={String(product?.supplierStock ?? stock)} />
+          </>
+        )}
         <ProductImagesUpload
           images={images}
           files={imageFiles}

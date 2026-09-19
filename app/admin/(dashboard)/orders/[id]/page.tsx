@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import DropshipShipments from "@/components/admin/DropshipShipments";
 import OrderStatusControls from "@/components/admin/OrderStatusControls";
+import { DROPSHIP_UI_ENABLED } from "@/lib/dropship";
 import { getOrderById } from "@/lib/db";
 import { formatDate, formatQar } from "@/lib/format";
 
@@ -22,6 +24,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
         <p className="admin-updated">{formatDate(order.createdAt)}</p>
       </div>
       <OrderStatusControls order={order} />
+      {DROPSHIP_UI_ENABLED ? <DropshipShipments order={order} /> : null}
       <section className="admin-panel" style={{ marginBottom: "1.25rem" }}>
         {order.items.map((item) => (
           <div
@@ -60,8 +63,11 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
         <p style={{ color: "var(--muted)" }}>{order.email}</p>
         {order.shippingAddress.phone ? <p style={{ marginTop: "0.75rem" }}>{order.shippingAddress.phone}</p> : null}
         <p style={{ marginTop: "0.75rem" }}>{order.shippingAddress.line1}</p>
+        {order.shippingAddress.area ? <p>{order.shippingAddress.area}</p> : null}
         <p>
-          {order.shippingAddress.city}, {order.shippingAddress.country}
+          {[order.shippingAddress.city, order.shippingAddress.postalCode, order.shippingAddress.country]
+            .filter(Boolean)
+            .join(", ")}
         </p>
         {order.notes ? <p style={{ marginTop: "0.75rem" }}>Note: {order.notes}</p> : null}
       </section>

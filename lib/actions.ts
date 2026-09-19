@@ -17,6 +17,7 @@ import {
   getOrderById,
   getProductById,
   getStoreSettings,
+  listAllProducts,
   listCategories,
   updateCustomer,
   updateExpense,
@@ -40,12 +41,26 @@ import { mapVariants } from "@/lib/db/mappers";
 import { notifyOrderCreated, notifyOrderReadyToShip, shouldSendReadyToShip } from "@/lib/email/orders";
 import { isValidExpensePair, MAX_EXPENSE_FILES, todayIsoDate } from "@/lib/expenses";
 import { normalizePromo, promoIsActive } from "@/lib/format";
+import {
+  applyShipmentAttempt,
+  canManualRetry,
+  DROPSHIP_UI_ENABLED,
+  isDropshipSource,
+  isListedOnShop,
+  normalizeProductSource,
+  parseSupplierUrl,
+  placeSupplierOrder,
+  sellableStock,
+} from "@/lib/dropship";
 import { productStock } from "@/lib/products";
+import { importRowToInput, validateProductImport } from "@/lib/product-import";
 import { removeExpenseFile, removeStoredImage, uploadCategoryImage, uploadExpenseFile } from "@/lib/storage";
 import { composeGulfPhone, isValidEmail, parseGulfPhone } from "@/lib/validation";
 import type {
   CustomerStatus,
+  DropshipShipment,
   ExpenseFile,
+  Order,
   OrderItem,
   OrderStatus,
   PaymentMethod,
@@ -63,6 +78,36 @@ function formString(form: FormData, key: string) {
 
 function csv(value: string) {
   return value.split(",").map((v) => v.trim()).filter(Boolean);
+}
+
+async function fulfillDropshipShipments(
+  order: Order,
+  options: { shipmentId?: string } = {},
+): Promise<Order> {
+  const settings = await getStoreSettings();
+  const shipments = order.shipments ?? [];
+  if (!shipments.length) return order;
+
+  let changed = false;
+  const next: DropshipShipment[] = [];
+  for (const shipment of shipments) {
+    const targeted = !options.shipmentId || shipment.id === options.shipmentId;
+    if (!targeted || !canManualRetry(shipment)) {
+      next.push(shipment);
+      continue;
+    }
+    const result = await placeSupplierOrder({
+      enabled: settings.dropshipEnabled,
+      source: shipment.source,
+      supplierProductId: shipment.supplierProductId,
+      quantity: shipment.quantity,
+      address: order.shippingAddress,
+    });
+    next.push(applyShipmentAttempt(shipment, result));
+    changed = true;
+  }
+  if (!changed) return order;
+  return updateOrder(order.id, { shipments: next });
 }
 
 export async function loginAdminAction(formData: FormData) {
@@ -160,6 +205,8 @@ export async function placeOrderAction(input: {
     line1: string;
     city: string;
     country: string;
+    postalCode?: string;
+    area?: string;
     phone?: string;
   };
 }) {
@@ -170,21 +217,41 @@ export async function placeOrderAction(input: {
   const line1 = input.shippingAddress.line1.trim();
   const city = input.shippingAddress.city.trim();
   const country = input.shippingAddress.country.trim();
+  const postalCode = (input.shippingAddress.postalCode ?? "").trim();
+  const area = (input.shippingAddress.area ?? "").trim();
   const phone = parseGulfPhone(input.shippingAddress.phone ?? "")?.e164 ?? "";
   if (!isValidEmail(email)) return { error: "Enter a valid email address" };
   if (!customerName) return { error: "Full name is required" };
   if (!phone) return { error: "Enter a valid Gulf phone number" };
   if (!line1 || !city || !country) return { error: "Shipping address is required" };
   try {
+    const settings = await getStoreSettings();
+    const resolvedItems: OrderItem[] = [];
+    for (const item of input.items) {
+      const product = await getProductById(item.productId);
+      if (!product) return { error: "A product in your bag is no longer available." };
+      if (isDropshipSource(product.source) && !isListedOnShop(product, settings.dropshipBuffer)) {
+        return { error: `${product.name} is no longer available.` };
+      }
+      if (isDropshipSource(product.source) && item.quantity > sellableStock(product, settings.dropshipBuffer)) {
+        return { error: `${product.name} does not have enough stock.` };
+      }
+      resolvedItems.push({
+        ...item,
+        source: product.source,
+        supplierProductId: product.supplierProductId,
+        supplierUrl: product.supplierUrl,
+      });
+    }
     const order = await createOrder({
-      items: input.items,
+      items: resolvedItems,
       notes: input.notes,
       customerId: session?.id ?? null,
       email,
       customerName,
       paymentMethod: input.paymentMethod ?? "cod",
       promoCode: input.promoCode,
-      shippingAddress: { line1, city, country, phone },
+      shippingAddress: { line1, city, country, postalCode, area, phone },
     });
     await notifyOrderCreated(order);
     revalidatePath("/admin");
@@ -233,7 +300,8 @@ export async function saveProductAction(formData: FormData) {
       uploadedImages.push(await uploadCategoryImage(value, "products"));
     }
     const nextImages = [...keepImages, ...uploadedImages];
-    if (!nextImages.length) return { error: "Add at least one product image." };
+    const status = (formString(formData, "status") || "active") as ProductStatus;
+    if (!nextImages.length && status !== "draft") return { error: "Add at least one product image." };
     if (previous) {
       for (const image of previous.images) {
         if (!nextImages.includes(image)) await removeStoredImage(image);
@@ -258,6 +326,10 @@ export async function saveProductAction(formData: FormData) {
       hasVariants,
       variants: hasVariants ? variants : [],
       status: (formString(formData, "status") || "active") as ProductStatus,
+      source: normalizeProductSource(formString(formData, "source")),
+      supplierUrl: formString(formData, "supplierUrl"),
+      supplierProductId: formString(formData, "supplierProductId"),
+      supplierStock: Number(formString(formData, "supplierStock") || formString(formData, "stock") || 0),
     };
     if (!payload.name) return { error: "Name is required." };
     if (hasVariants && payload.variants && payload.variants.length === 0) {
@@ -272,6 +344,30 @@ export async function saveProductAction(formData: FormData) {
   revalidatePath("/shop");
   revalidatePath("/");
   return { ok: true as const };
+}
+
+export async function importProductsAction(records: Record<string, unknown>[]) {
+  await requireAdmin();
+  try {
+    const [categories, existing] = await Promise.all([listCategories(), listAllProducts()]);
+    const preview = validateProductImport(records, categories, existing);
+    if (preview.error) return { error: preview.error };
+    const invalid = preview.rows.find((row) => row.errors.length);
+    if (invalid) {
+      return { error: `Row ${invalid.row} is missing ${invalid.errors.join(", ")}.` };
+    }
+    for (const row of preview.rows) {
+      const payload = importRowToInput(row, categories);
+      if ("error" in payload) return { error: payload.error };
+      await createProduct(payload);
+    }
+    revalidatePath("/admin/products");
+    revalidatePath("/shop");
+    revalidatePath("/");
+    return { ok: true as const, count: preview.rows.length };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not import products." };
+  }
 }
 
 export async function deleteProductAction(formData: FormData) {
@@ -402,6 +498,13 @@ export async function saveStoreSettingsAction(formData: FormData) {
   const returnDays = Number(formString(formData, "returnDays"));
   const promoCode = normalizePromo(formString(formData, "promoCode"));
   const promoPercent = Number(formString(formData, "promoPercent"));
+  const current = await getStoreSettings();
+  const dropshipEnabled = DROPSHIP_UI_ENABLED
+    ? formString(formData, "dropshipEnabled") === "1"
+    : current.dropshipEnabled;
+  const dropshipBuffer = DROPSHIP_UI_ENABLED
+    ? Number(formString(formData, "dropshipBuffer"))
+    : current.dropshipBuffer;
   if (!Number.isFinite(freeShippingFrom) || freeShippingFrom < 0) {
     return { error: "Enter a valid free-shipping threshold." };
   }
@@ -414,6 +517,9 @@ export async function saveStoreSettingsAction(formData: FormData) {
   if (promoCode && (!Number.isFinite(promoPercent) || promoPercent < 1 || promoPercent > 100)) {
     return { error: "Enter a promo discount between 1 and 100." };
   }
+  if (!Number.isFinite(dropshipBuffer) || dropshipBuffer < 0) {
+    return { error: "Enter a valid dropship stock buffer." };
+  }
   try {
     await updateStoreSettings({
       freeShippingFrom,
@@ -421,6 +527,8 @@ export async function saveStoreSettingsAction(formData: FormData) {
       returnDays,
       promoCode,
       promoPercent: promoCode ? promoPercent : 0,
+      dropshipEnabled,
+      dropshipBuffer,
     });
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Could not save settings." };
@@ -429,7 +537,69 @@ export async function saveStoreSettingsAction(formData: FormData) {
   revalidatePath("/cart");
   revalidatePath("/checkout");
   revalidatePath("/admin/settings");
+  revalidatePath("/admin/dropship");
+  revalidatePath("/shop");
   return { ok: true as const };
+}
+
+export async function importDropshipProductAction(formData: FormData) {
+  await requireAdmin();
+  if (!DROPSHIP_UI_ENABLED) return { error: "Dropshipping is not available yet." };
+  const parsed = parseSupplierUrl(formString(formData, "url"));
+  if ("error" in parsed) return { error: parsed.error };
+  const categories = await listCategories();
+  const categoryId = formString(formData, "categoryId");
+  const selected = categories.find((category) => category.id === categoryId) ?? categories[0];
+  if (!selected) return { error: "Create a category before importing a dropship product." };
+  const price = Number(formString(formData, "price") || 0);
+  if (!Number.isFinite(price) || price <= 0) return { error: "Enter the sell price before importing." };
+  const name = formString(formData, "name") || parsed.title;
+  try {
+    const product = await createProduct({
+      name,
+      nameAr: "",
+      description: `Imported from ${parsed.source === "aliexpress" ? "AliExpress" : "Temu"}. Review before publishing.`,
+      descriptionAr: "",
+      category: selected.name,
+      categorySlug: selected.slug,
+      price,
+      images: [],
+      sku: parsed.sku,
+      sizes: [],
+      colors: [],
+      stock: 0,
+      status: "draft",
+      source: parsed.source,
+      supplierUrl: parsed.supplierUrl,
+      supplierProductId: parsed.supplierProductId,
+      supplierStock: 0,
+    });
+    revalidatePath("/admin/products");
+    revalidatePath("/admin/dropship");
+    return { ok: true as const, productId: product.id };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not import product." };
+  }
+}
+
+export async function retryDropshipShipmentAction(formData: FormData) {
+  await requireAdmin();
+  if (!DROPSHIP_UI_ENABLED) return { error: "Dropshipping is not available yet." };
+  const orderId = formString(formData, "orderId");
+  const shipmentId = formString(formData, "shipmentId");
+  try {
+    const order = await getOrderById(orderId);
+    if (!order) return { error: "Order not found." };
+    const shipment = (order.shipments ?? []).find((item) => item.id === shipmentId);
+    if (!shipment) return { error: "Shipment not found." };
+    if (!canManualRetry(shipment)) return { error: "This shipment cannot be retried." };
+    await fulfillDropshipShipments(order, { shipmentId });
+    revalidateOrderPaths(order.id);
+    revalidatePath("/admin/dropship");
+    return { ok: true as const };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not retry supplier order." };
+  }
 }
 
 function parseExpenseFiles(raw: string): ExpenseFile[] {

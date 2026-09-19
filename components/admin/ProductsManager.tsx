@@ -4,21 +4,25 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AdminModal from "@/components/admin/AdminModal";
+import ProductImport from "@/components/admin/ProductImport";
 import StatusBadge from "@/components/admin/StatusBadge";
 import { deleteProductAction } from "@/lib/actions";
+import { DROPSHIP_UI_ENABLED } from "@/lib/dropship";
 import { formatQar } from "@/lib/format";
 import { matchesProductSearch, productPriceRange, productStock } from "@/lib/products";
 import { usePreferences } from "@/lib/preferences";
 import { useToast } from "@/lib/toast";
-import type { Product } from "@/types";
+import type { Category, Product } from "@/types";
 
 const PAGE_SIZE = 8;
 
 export default function ProductsManager({
   products,
+  categories,
   initialQuery = "",
 }: {
   products: Product[];
+  categories: Category[];
   initialQuery?: string;
 }) {
   const { t } = usePreferences();
@@ -78,6 +82,12 @@ export default function ProductsManager({
           <h1 className="admin-title">{t("productsNav")}</h1>
         </div>
         <div className="admin-page-head__actions">
+          {DROPSHIP_UI_ENABLED ? (
+            <Link href="/admin/dropship" className="admin-text-btn">
+              {t("importDropship")}
+            </Link>
+          ) : null}
+          <ProductImport categories={categories} products={products} />
           <Link href="/admin/products/new" className="btn-gold btn-compact">
             {t("addProduct")}
           </Link>
@@ -117,6 +127,7 @@ export default function ProductsManager({
                   <th>{t("productCategory")}</th>
                   <th>{t("priceCol")}</th>
                   <th>{t("stockCol")}</th>
+                  {DROPSHIP_UI_ENABLED ? <th>{t("productSource")}</th> : null}
                   <th>{t("status")}</th>
                 </tr>
               </thead>
@@ -165,6 +176,20 @@ export default function ProductsManager({
                     <td data-label={t("stockCol")} className={productStock(product) < 5 ? "is-critical" : undefined}>
                       {productStock(product)}
                     </td>
+                    {DROPSHIP_UI_ENABLED ? (
+                      <td data-label={t("productSource")}>
+                        <StatusBadge
+                          status={product.source || "warehouse"}
+                          label={
+                            product.source === "aliexpress"
+                              ? t("sourceAliexpress")
+                              : product.source === "temu"
+                                ? t("sourceTemu")
+                                : t("sourceWarehouse")
+                          }
+                        />
+                      </td>
+                    ) : null}
                     <td data-label={t("status")}>
                       <StatusBadge status={product.status} />
                     </td>
