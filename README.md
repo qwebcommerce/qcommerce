@@ -34,6 +34,9 @@ SUPABASE_SECRET_KEY=sb_secret_...
 DB_PASSWORD=your-database-password
 ADMIN_EMAIL=admin@voombaza.com
 ADMIN_PASSWORD=admin123
+RESEND_API_KEY=re_...
+EMAIL_FROM=Voombaza <onboarding@resend.dev>
+NEXT_PUBLIC_SITE_URL=https://your-store-domain.com
 ```
 
 `npm run db:migrate` applies `supabase/schema.sql` over Postgres (`DB_PASSWORD`) and upserts the catalogue. After that, manage products from `/admin`.

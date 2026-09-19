@@ -14,6 +14,7 @@ import {
   emailHasUsedPromo,
   getCategoryById,
   getCustomerById,
+  getOrderById,
   getProductById,
   getStoreSettings,
   listCategories,
@@ -36,6 +37,7 @@ import {
   setCustomerSession,
 } from "@/lib/auth";
 import { mapVariants } from "@/lib/db/mappers";
+import { notifyOrderCreated, notifyOrderReadyToShip, shouldSendReadyToShip } from "@/lib/email/orders";
 import { isValidExpensePair, MAX_EXPENSE_FILES, todayIsoDate } from "@/lib/expenses";
 import { normalizePromo, promoIsActive } from "@/lib/format";
 import { productStock } from "@/lib/products";
@@ -184,6 +186,7 @@ export async function placeOrderAction(input: {
       promoCode: input.promoCode,
       shippingAddress: { line1, city, country, phone },
     });
+    await notifyOrderCreated(order);
     revalidatePath("/admin");
     revalidatePath("/account");
     return { ok: true, orderId: order.id, orderNumber: order.orderNumber, isGuest: !session };
@@ -298,7 +301,11 @@ export async function updateOrderStatusAction(formData: FormData) {
   const status = formString(formData, "status") as OrderStatus;
   if (!ORDER_STATUSES.includes(status)) return { error: "Invalid order status." };
   try {
-    await updateOrder(id, { status });
+    const previous = await getOrderById(id);
+    const order = await updateOrder(id, { status });
+    if (previous && shouldSendReadyToShip(previous.status, order.status)) {
+      await notifyOrderReadyToShip(order);
+    }
     revalidateOrderPaths(id);
     return { ok: true as const };
   } catch (error) {
