@@ -14,7 +14,8 @@ function itemMeta(item: Order["items"][number]) {
   return [item.size, item.color].filter(Boolean).join(" · ");
 }
 
-function orderUrl(order: Order) {
+function orderUrl(order: Order, kind: "created" | "ready" | "created-admin") {
+  if (kind === "created-admin") return `${siteUrl()}/admin/orders/${order.id}`;
   return `${siteUrl()}/checkout/success?order=${encodeURIComponent(order.orderNumber)}`;
 }
 
@@ -63,25 +64,33 @@ function totals(order: Order, ink: string, muted: string, line: string) {
 
 export function renderOrderEmail(
   order: Order,
-  kind: "created" | "ready",
+  kind: "created" | "ready" | "created-admin",
 ): { subject: string; html: string; text: string } {
   const brand = emailBrand();
   const firstName = order.customerName.trim().split(/\s+/)[0] || "there";
-  const headline = kind === "created" ? "Order confirmed" : "Ready to ship";
-  const headlineAr = kind === "created" ? "تم تأكيد طلبك" : "طلبك جاهز للشحن";
+  const headline =
+    kind === "created-admin" ? "New order" : kind === "created" ? "Order confirmed" : "Ready to ship";
+  const headlineAr =
+    kind === "created-admin" ? "طلب جديد" : kind === "created" ? "تم تأكيد طلبك" : "طلبك جاهز للشحن";
   const intro =
-    kind === "created"
-      ? `Thank you, ${firstName}. We have received your order and our atelier will prepare it with care.`
-      : `Good news, ${firstName}. Your order is packed and ready to leave for delivery across the GCC.`;
+    kind === "created-admin"
+      ? `A new order was placed by ${order.customerName}. Open it in admin to confirm and prepare fulfilment.`
+      : kind === "created"
+        ? `Thank you, ${firstName}. We have received your order and our atelier will prepare it with care.`
+        : `Good news, ${firstName}. Your order is packed and ready to leave for delivery across the GCC.`;
   const introAr =
-    kind === "created"
-      ? "شكراً لك. استلمنا طلبك وسنجهّزه بعناية."
-      : "أخبار سارة. طلبك جاهز للشحن إلى عنوانك في الخليج.";
+    kind === "created-admin"
+      ? `تم تقديم طلب جديد من ${order.customerName}. افتحه من لوحة الإدارة للمتابعة.`
+      : kind === "created"
+        ? "شكراً لك. استلمنا طلبك وسنجهّزه بعناية."
+        : "أخبار سارة. طلبك جاهز للشحن إلى عنوانك في الخليج.";
   const subject =
-    kind === "created"
-      ? `${brand.name} · Order ${order.orderNumber} confirmed`
-      : `${brand.name} · Order ${order.orderNumber} is ready to ship`;
-  const cta = kind === "created" ? "View order" : "Track your order";
+    kind === "created-admin"
+      ? `${brand.name} · New order ${order.orderNumber}`
+      : kind === "created"
+        ? `${brand.name} · Order ${order.orderNumber} confirmed`
+        : `${brand.name} · Order ${order.orderNumber} is ready to ship`;
+  const cta = kind === "created-admin" ? "Open in admin" : kind === "created" ? "View order" : "Track your order";
   const payment =
     order.paymentMethod === "cod" ? "Cash on delivery" : "Paid online";
 
@@ -144,7 +153,7 @@ export function renderOrderEmail(
             <td style="background:${brand.surface};padding:28px 40px 36px;">
               <div style="font-family:Helvetica,Arial,sans-serif;font-size:10px;letter-spacing:0.18em;text-transform:uppercase;color:${brand.muted};">Deliver to</div>
               <p style="margin:8px 0 28px;font-size:15px;line-height:1.7;color:${brand.ink};">${addressBlock(order)}</p>
-              <a href="${orderUrl(order)}" style="display:inline-block;background:${brand.ink};color:#ffffff;text-decoration:none;padding:14px 28px;font-family:Helvetica,Arial,sans-serif;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;">${cta}</a>
+              <a href="${orderUrl(order, kind)}" style="display:inline-block;background:${brand.ink};color:#ffffff;text-decoration:none;padding:14px 28px;font-family:Helvetica,Arial,sans-serif;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;">${cta}</a>
             </td>
           </tr>
           <tr>
@@ -170,7 +179,7 @@ export function renderOrderEmail(
     ...order.items.map((item) => `- ${item.name} × ${item.quantity} · ${formatQar(item.price * item.quantity)}`),
     `Total ${formatQar(order.total)}`,
     `Ship to: ${order.customerName}, ${order.shippingAddress.line1}, ${order.shippingAddress.city}, ${order.shippingAddress.country}`,
-    orderUrl(order),
+    orderUrl(order, kind),
   ].join("\n");
 
   return { subject, html, text };

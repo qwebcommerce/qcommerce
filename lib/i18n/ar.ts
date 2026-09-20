@@ -487,4 +487,7 @@ export const ar: typeof en = {
   importRequired: "مطلوب",
   importOptional: "اختياري",
   toastProductsImported: "تمت إضافة {count} منتجات",
+  orderEmailFailed: "تعذر إرسال البريد",
+  orderEmailFailedBody: "تم تأكيد طلبك. لم نتمكن من إرسال رسالة التأكيد.",
+  adminEmailFailedBody: "تم حفظ الحالة، لكن تعذر إرسال البريد للعميل.",
 };

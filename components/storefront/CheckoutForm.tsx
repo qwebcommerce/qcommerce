@@ -179,6 +179,9 @@ export default function CheckoutForm({ customer }: { customer: CheckoutCustomer 
           }
           sessionStorage.removeItem(DRAFT_KEY);
           clear();
+          if (result.emailFailed) {
+            toast.error(t("orderEmailFailed"), t("orderEmailFailedBody"));
+          }
           router.push(`/checkout/success?order=${encodeURIComponent(result.orderNumber)}`);
         }}
         className="checkout-grid"

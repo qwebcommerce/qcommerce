@@ -36,6 +36,7 @@ ADMIN_EMAIL=admin@voombaza.com
 ADMIN_PASSWORD=admin123
 RESEND_API_KEY=re_...
 EMAIL_FROM=Voombaza <onboarding@resend.dev>
+EMAIL_ADMIN=admin@voombaza.com
 NEXT_PUBLIC_SITE_URL=https://your-store-domain.com
 
 # Optional. Dropshipping stays hidden until the client is ready.

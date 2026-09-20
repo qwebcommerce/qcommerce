@@ -485,4 +485,7 @@ export const en = {
   importRequired: "required",
   importOptional: "optional",
   toastProductsImported: "{count} products added",
+  orderEmailFailed: "Email could not be sent",
+  orderEmailFailedBody: "Your order is confirmed. We could not send the notification email.",
+  adminEmailFailedBody: "The status was saved, but the customer email could not be sent.",
 };

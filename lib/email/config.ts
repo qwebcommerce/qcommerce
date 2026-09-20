@@ -8,6 +8,10 @@ export function emailFrom() {
   return process.env.EMAIL_FROM || `${theme.brand.display} <onboarding@resend.dev>`;
 }
 
+export function adminNotifyEmail() {
+  return (process.env.EMAIL_ADMIN || process.env.ADMIN_EMAIL || "").trim().toLowerCase();
+}
+
 export function emailBrand() {
   const palette = theme.colors.light;
   return {

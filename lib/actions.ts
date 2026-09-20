@@ -253,10 +253,16 @@ export async function placeOrderAction(input: {
       promoCode: input.promoCode,
       shippingAddress: { line1, city, country, postalCode, area, phone },
     });
-    await notifyOrderCreated(order);
+    const notify = await notifyOrderCreated(order);
     revalidatePath("/admin");
     revalidatePath("/account");
-    return { ok: true, orderId: order.id, orderNumber: order.orderNumber, isGuest: !session };
+    return {
+      ok: true,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      isGuest: !session,
+      emailFailed: notify.emailFailed,
+    };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Could not place order" };
   }
@@ -399,11 +405,12 @@ export async function updateOrderStatusAction(formData: FormData) {
   try {
     const previous = await getOrderById(id);
     const order = await updateOrder(id, { status });
+    let emailFailed = false;
     if (previous && shouldSendReadyToShip(previous.status, order.status)) {
-      await notifyOrderReadyToShip(order);
+      emailFailed = (await notifyOrderReadyToShip(order)).emailFailed;
     }
     revalidateOrderPaths(id);
-    return { ok: true as const };
+    return { ok: true as const, emailFailed };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Could not update order." };
   }

@@ -21,7 +21,7 @@ export default function OrderStatusControls({ order }: { order: Order }) {
   const [pending, startTransition] = useTransition();
 
   function run(
-    action: (form: FormData) => Promise<{ ok?: true; error?: string }>,
+    action: (form: FormData) => Promise<{ ok?: true; error?: string; emailFailed?: boolean }>,
     form: FormData,
     success: string,
   ) {
@@ -32,6 +32,7 @@ export default function OrderStatusControls({ order }: { order: Order }) {
         return;
       }
       toast.success(success);
+      if (result.emailFailed) toast.error(t("orderEmailFailed"), t("adminEmailFailedBody"));
       router.refresh();
     });
   }
