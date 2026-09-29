@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useMemo, useRef, useSyncExternalStore } from "react";
+import { useRouter } from "next/navigation";
 import { translate, type MessageKey } from "@/lib/i18n";
 import { defaultLocale, defaultThemeMode, type Locale } from "@/theme.config";
 
@@ -79,6 +80,7 @@ export function PreferencesProvider({
   initialLocale?: Locale;
   initialTheme?: ThemeMode;
 }) {
+  const router = useRouter();
   const serverSnapshot = useRef<Snapshot>({ locale: initialLocale, theme: initialTheme });
   const snapshot = useSyncExternalStore(subscribe, read, () => serverSnapshot.current);
   const locale = snapshot.locale;
@@ -89,11 +91,14 @@ export function PreferencesProvider({
       locale,
       theme,
       dir: locale === "ar" ? "rtl" : "ltr",
-      setLocale: (next) => persist({ locale: next, theme: read().theme }),
+      setLocale: (next) => {
+        persist({ locale: next, theme: read().theme });
+        router.refresh();
+      },
       setTheme: (next) => persist({ locale: read().locale, theme: next }),
       t: (key, vars) => translate(locale, key, vars),
     }),
-    [locale, theme],
+    [locale, theme, router],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
