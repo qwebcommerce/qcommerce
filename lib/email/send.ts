@@ -24,7 +24,7 @@ export async function sendStoreEmail({
     console.warn("Resend is not configured. Set RESEND_API_KEY to send email.");
     return { skipped: true as const };
   }
-  const { error } = await resend.emails.send({
+  const { data, error } = await resend.emails.send({
     from: emailFrom(),
     to,
     subject,
@@ -34,6 +34,10 @@ export async function sendStoreEmail({
   if (error) {
     console.error("Resend send failed:", error.message);
     return { error: error.message };
+  }
+  if (!data?.id) {
+    console.error("Resend send failed: no message id returned");
+    return { error: "Resend did not return a message id" };
   }
   return { ok: true as const };
 }

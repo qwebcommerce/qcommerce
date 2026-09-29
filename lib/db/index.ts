@@ -22,8 +22,21 @@ import type {
   StoreSettings,
 } from "@/types";
 
+const EMPTY_DASHBOARD: DashboardStats = {
+  revenue: 0,
+  orderCount: 0,
+  productCount: 0,
+  customerCount: 0,
+  pendingOrders: 0,
+  lowStock: 0,
+};
+
 function emptyOnMissingTable<T>(fallback: T) {
-  return (): T => fallback;
+  return (error: unknown): T => {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Supabase read failed:", message);
+    return fallback;
+  };
 }
 
 export async function listProducts(filters?: ProductFilters): Promise<Product[]> {
@@ -31,15 +44,15 @@ export async function listProducts(filters?: ProductFilters): Promise<Product[]>
 }
 
 export async function listAllProducts(): Promise<Product[]> {
-  return supabaseStore.listAllProducts();
+  return supabaseStore.listAllProducts().catch(emptyOnMissingTable([]));
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
-  return supabaseStore.getProductBySlug(slug);
+  return supabaseStore.getProductBySlug(slug).catch(emptyOnMissingTable(null));
 }
 
 export async function getProductById(id: string): Promise<Product | null> {
-  return supabaseStore.getProductById(id);
+  return supabaseStore.getProductById(id).catch(emptyOnMissingTable(null));
 }
 
 export async function createProduct(input: ProductInput): Promise<Product> {
@@ -71,15 +84,15 @@ export async function deleteCategory(id: string): Promise<void> {
 }
 
 export async function listOrders(): Promise<Order[]> {
-  return supabaseStore.listOrders();
+  return supabaseStore.listOrders().catch(emptyOnMissingTable([]));
 }
 
 export async function getOrderById(id: string): Promise<Order | null> {
-  return supabaseStore.getOrderById(id);
+  return supabaseStore.getOrderById(id).catch(emptyOnMissingTable(null));
 }
 
 export async function listOrdersByCustomer(customerId: string, email?: string): Promise<Order[]> {
-  return supabaseStore.listOrdersByCustomer(customerId, email);
+  return supabaseStore.listOrdersByCustomer(customerId, email).catch(emptyOnMissingTable([]));
 }
 
 export async function createOrder(input: OrderInput): Promise<Order> {
@@ -102,15 +115,15 @@ export async function updateOrder(
 }
 
 export async function listCustomers(): Promise<Customer[]> {
-  return supabaseStore.listCustomers();
+  return supabaseStore.listCustomers().catch(emptyOnMissingTable([]));
 }
 
 export async function getCustomerById(id: string): Promise<Customer | null> {
-  return supabaseStore.getCustomerById(id);
+  return supabaseStore.getCustomerById(id).catch(emptyOnMissingTable(null));
 }
 
 export async function getCustomerByEmail(email: string): Promise<Customer | null> {
-  return supabaseStore.getCustomerByEmail(email);
+  return supabaseStore.getCustomerByEmail(email).catch(emptyOnMissingTable(null));
 }
 
 export async function createCustomer(input: CustomerInput): Promise<Customer> {
@@ -129,7 +142,7 @@ export async function addNewsletter(email: string): Promise<NewsletterEntry> {
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  return supabaseStore.getDashboardStats();
+  return supabaseStore.getDashboardStats().catch(emptyOnMissingTable(EMPTY_DASHBOARD));
 }
 
 export async function getStoreSettings(): Promise<StoreSettings> {
@@ -141,7 +154,7 @@ export async function updateStoreSettings(input: StoreSettings): Promise<StoreSe
 }
 
 export async function emailHasUsedPromo(email: string, code: string): Promise<boolean> {
-  return supabaseStore.emailHasUsedPromo(email, code);
+  return supabaseStore.emailHasUsedPromo(email, code).catch(emptyOnMissingTable(false));
 }
 
 export async function listExpenses(): Promise<Expense[]> {

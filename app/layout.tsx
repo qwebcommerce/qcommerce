@@ -46,6 +46,7 @@ export default async function RootLayout({
       dir={locale === "ar" ? "rtl" : "ltr"}
       data-theme={colorTheme}
       className={`${geistSans.variable} ${geistMono.variable} ${arabic.variable} h-full antialiased`}
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <head>
