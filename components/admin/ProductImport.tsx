@@ -3,15 +3,16 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import AdminModal from "@/components/admin/AdminModal";
-import { importProductsAction } from "@/lib/actions";
+import StatusBadge from "@/components/admin/StatusBadge";
+import { importProductsAction, productImportSampleXlsxAction } from "@/lib/actions";
 import { formatQar } from "@/lib/format";
+import type { MessageKey } from "@/lib/i18n";
 import {
   buildSampleCsv,
-  buildSampleXlsx,
   parseProductImportFile,
-  PRODUCT_IMPORT_GUIDE,
   PRODUCT_IMPORT_MAX_ROWS,
   validateProductImport,
+  type ProductImportIssue,
   type ProductImportRow,
 } from "@/lib/product-import";
 import { usePreferences } from "@/lib/preferences";
@@ -27,6 +28,10 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function fieldIssues(row: ProductImportRow, field: ProductImportIssue["field"]) {
+  return row.errors.filter((item) => item.field === field);
+}
+
 export default function ProductImport({
   categories,
   products,
@@ -40,6 +45,7 @@ export default function ProductImport({
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [reading, setReading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState("");
   const [records, setRecords] = useState<Record<string, unknown>[] | null>(null);
   const [rows, setRows] = useState<ProductImportRow[]>([]);
@@ -94,16 +100,43 @@ export default function ProductImport({
     });
   }
 
+  function downloadExcelSample() {
+    setDownloading(true);
+    void (async () => {
+      const result = await productImportSampleXlsxAction();
+      if (result.error || !result.base64) {
+        toast.error(t("toastError"), result.error || t("importFileInvalid"));
+      } else {
+        const bytes = Uint8Array.from(atob(result.base64), (char) => char.charCodeAt(0));
+        downloadBlob(
+          new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+          result.filename ?? "product-import-sample.xlsx",
+        );
+      }
+      setDownloading(false);
+    })();
+  }
+
+  function FieldError({ row, field }: { row: ProductImportRow; field: ProductImportIssue["field"] }) {
+    const issues = fieldIssues(row, field);
+    if (!issues.length) return null;
+    return (
+      <>
+        {issues.map((item) => (
+          <small key={item.key} className="admin-form-error">
+            {t(item.key as MessageKey)}
+          </small>
+        ))}
+      </>
+    );
+  }
+
   return (
     <>
       <button type="button" className="admin-text-btn" onClick={() => downloadBlob(new Blob([buildSampleCsv(categories)], { type: "text/csv;charset=utf-8" }), "product-import-sample.csv")}>
         {t("downloadSampleCsv")}
       </button>
-      <button
-        type="button"
-        className="admin-text-btn"
-        onClick={async () => downloadBlob(await buildSampleXlsx(categories), "product-import-sample.xlsx")}
-      >
+      <button type="button" className="admin-text-btn" onClick={downloadExcelSample} disabled={downloading || pending}>
         {t("downloadSampleExcel")}
       </button>
       <button type="button" className="btn-gold btn-compact" disabled={reading} onClick={() => inputRef.current?.click()}>
@@ -140,51 +173,62 @@ export default function ProductImport({
             <p className="admin-modal-note">{t("importConfirmHint")}</p>
           )}
           {error ? <p className="admin-form-error">{error}</p> : null}
-          <div className="admin-import-table-wrap">
-            <table className="admin-table admin-import-table">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>{t("productsNav")}</th>
-                  <th>{t("productCategory")}</th>
-                  <th>{t("priceCol")}</th>
-                  <th>{t("sku")}</th>
-                  <th>{t("stockCol")}</th>
-                  <th>{t("status")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={`${row.row}-${row.sku}`} className={row.errors.length ? "is-import-error" : undefined}>
-                    <td>{row.row}</td>
-                    <td>
-                      <strong>{row.name || "—"}</strong>
-                      {row.nameAr ? <b dir="rtl">{row.nameAr}</b> : null}
-                      <span>{row.images.length ? t("importImagesCount", { count: row.images.length }) : t("importNoImages")}</span>
-                      {row.errors.length ? <small className="admin-form-error">{row.errors.join(", ")}</small> : null}
-                    </td>
-                    <td>{row.category || "—"}</td>
-                    <td>{row.price ? formatQar(row.price) : "—"}</td>
-                    <td>{row.sku || "—"}</td>
-                    <td>{row.stock}</td>
-                    <td>{row.status}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="admin-import-list">
+            {rows.map((row) => (
+              <article key={`${row.row}-${row.sku}`} className={`admin-import-card${row.errors.length ? " is-import-error" : ""}`}>
+                <div className="admin-import-card__media">
+                  {row.images[0] ? <img src={row.images[0]} alt="" /> : <span />}
+                </div>
+                <div className="admin-import-card__body">
+                  <p className="admin-import-card__kicker">{t("importRow", { row: row.row })}</p>
+                  <h3>{row.name || "—"}</h3>
+                  <FieldError row={row} field="name" />
+                  {row.nameAr ? <b dir="rtl">{row.nameAr}</b> : null}
+                  {row.description ? <p className="admin-import-card__desc">{row.description}</p> : null}
+                  <div className="admin-import-card__meta">
+                    <div>
+                      <span>{t("productCategory")}</span>
+                      <strong>{row.category || "—"}</strong>
+                      <FieldError row={row} field="category" />
+                    </div>
+                    <div>
+                      <span>{t("priceCol")}</span>
+                      <strong>{row.price ? formatQar(row.price) : "—"}</strong>
+                      <FieldError row={row} field="price" />
+                      <FieldError row={row} field="compare_at_price" />
+                    </div>
+                    <div>
+                      <span>{t("sku")}</span>
+                      <strong>{row.sku || "—"}</strong>
+                      <FieldError row={row} field="sku" />
+                    </div>
+                    <div>
+                      <span>{t("stockCol")}</span>
+                      <strong>{String(row.stock)}</strong>
+                      <FieldError row={row} field="stock" />
+                    </div>
+                    <div>
+                      <span>{t("status")}</span>
+                      <StatusBadge status={row.status} />
+                      <FieldError row={row} field="status" />
+                    </div>
+                    <div>
+                      <span>{t("importImagesCount", { count: row.images.length })}</span>
+                      <FieldError row={row} field="images" />
+                      <FieldError row={row} field="badge" />
+                    </div>
+                  </div>
+                  {row.images.length > 1 ? (
+                    <div className="admin-import-card__thumbs">
+                      {row.images.slice(1, 5).map((image) => (
+                        <img key={image} src={image} alt="" />
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </article>
+            ))}
           </div>
-          <details className="admin-import-guide">
-            <summary>{t("importGuideTitle")}</summary>
-            <ul>
-              {PRODUCT_IMPORT_GUIDE.map((item) => (
-                <li key={item.column}>
-                  <strong>{item.column}</strong>
-                  {item.required ? ` · ${t("importRequired")}` : ` · ${t("importOptional")}`}
-                  <span>{item.format}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
         </AdminModal>
       ) : null}
     </>

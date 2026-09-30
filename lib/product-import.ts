@@ -1,4 +1,5 @@
 import { slugify } from "@/lib/format";
+import type { MessageKey } from "@/lib/i18n";
 import { csvList, productStock, syncProductVariants } from "@/lib/products";
 import type { Category, Product, ProductBadge, ProductInput, ProductStatus } from "@/types";
 
@@ -63,6 +64,11 @@ const HEADER_ALIASES: Record<string, (typeof PRODUCT_IMPORT_COLUMNS)[number]> = 
 
 const BADGES = new Set(["NEW", "SALE", "BESTSELLER", "TRENDING"]);
 
+export type ProductImportIssue = {
+  field: "name" | "category" | "price" | "sku" | "stock" | "images" | "badge" | "status" | "compare_at_price";
+  key: MessageKey;
+};
+
 export type ProductImportRow = {
   row: number;
   name: string;
@@ -81,7 +87,7 @@ export type ProductImportRow = {
   status: ProductStatus;
   hasVariants: boolean;
   images: string[];
-  errors: string[];
+  errors: ProductImportIssue[];
 };
 
 export type ProductImportPreview = {
@@ -108,6 +114,24 @@ function imageList(value: string) {
     .filter((item) => /^https?:\/\//i.test(item));
 }
 
+export function categorySelectLabel(category: Category, categories: Category[]) {
+  const parent = category.parentId ? categories.find((item) => item.id === category.parentId) : null;
+  return parent ? `${parent.name} / ${category.name}` : category.name;
+}
+
+export function categorySelectValues(categories: Category[]) {
+  const sorted = [...categories].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+  const labels = sorted.map((category) => categorySelectLabel(category, categories));
+  const counts = labels.reduce<Record<string, number>>((acc, label) => {
+    acc[label] = (acc[label] ?? 0) + 1;
+    return acc;
+  }, {});
+  return sorted.map((category) => {
+    const label = categorySelectLabel(category, categories);
+    return counts[label] > 1 ? `${label} (${category.slug})` : label;
+  });
+}
+
 function findCategory(categories: Category[], value: string) {
   const needle = value.trim().toLowerCase();
   if (!needle) return null;
@@ -115,6 +139,8 @@ function findCategory(categories: Category[], value: string) {
     categories.find((category) => category.slug.toLowerCase() === needle) ??
     categories.find((category) => category.name.toLowerCase() === needle) ??
     categories.find((category) => category.nameAr.trim().toLowerCase() === needle) ??
+    categories.find((category) => categorySelectLabel(category, categories).toLowerCase() === needle) ??
+    categories.find((category) => `${categorySelectLabel(category, categories)} (${category.slug})`.toLowerCase() === needle) ??
     null
   );
 }
@@ -132,11 +158,13 @@ function uniqueSlug(base: string, used: Set<string>) {
 }
 
 export function sampleImportCategory(categories: Category[]) {
-  return categories[0]?.slug || "your-category-slug";
+  return categorySelectValues(categories)[0] || "";
 }
 
 export function sampleImportRows(categories: Category[]): Record<(typeof PRODUCT_IMPORT_COLUMNS)[number], string>[] {
-  const category = sampleImportCategory(categories);
+  const labels = categorySelectValues(categories);
+  const category = labels[0] || "";
+  const secondCategory = labels[1] || category;
   return [
     {
       name: "Classic Court Shirt",
@@ -162,7 +190,7 @@ export function sampleImportRows(categories: Category[]): Record<(typeof PRODUCT
       slug: "",
       description: "Lightweight shorts with a secure waistband.",
       description_ar: "شورت خفيف بحزام مريح.",
-      category,
+      category: secondCategory,
       price: "120",
       compare_at_price: "",
       sku: "SAMPLE-SHORT-001",
@@ -184,42 +212,6 @@ export function buildSampleCsv(categories: Category[]) {
     PRODUCT_IMPORT_COLUMNS.join(","),
     ...rows.map((row) => PRODUCT_IMPORT_COLUMNS.map((key) => escape(row[key])).join(",")),
   ].join("\n");
-}
-
-export const PRODUCT_IMPORT_GUIDE: { column: string; required: boolean; format: string }[] = [
-  { column: "name", required: true, format: "English product name" },
-  { column: "name_ar", required: false, format: "Arabic name, optional" },
-  { column: "slug", required: false, format: "URL slug. Leave blank to generate from the name" },
-  { column: "description", required: false, format: "English description" },
-  { column: "description_ar", required: false, format: "Arabic description" },
-  { column: "category", required: true, format: "Existing category slug or name" },
-  { column: "price", required: true, format: "Sell price in QAR, greater than 0" },
-  { column: "compare_at_price", required: false, format: "Compare-at price, or leave blank" },
-  { column: "sku", required: true, format: "Unique SKU" },
-  { column: "stock", required: true, format: "Whole number, 0 or more" },
-  { column: "sizes", required: false, format: "Comma-separated, e.g. S, M, L" },
-  { column: "colors", required: false, format: "Comma-separated, e.g. Black, White" },
-  { column: "badge", required: false, format: "NEW, SALE, BESTSELLER, TRENDING, or blank" },
-  { column: "status", required: false, format: "draft or active. Defaults to draft" },
-  { column: "has_variants", required: false, format: "yes or no. Use yes only if each size/color has its own stock" },
-  { column: "images", required: true, format: "Public image URLs, comma-separated" },
-];
-
-export async function buildSampleXlsx(categories: Category[]) {
-  const XLSX = await import("xlsx");
-  const workbook = XLSX.utils.book_new();
-  const products = XLSX.utils.json_to_sheet(sampleImportRows(categories), { header: [...PRODUCT_IMPORT_COLUMNS] });
-  const guide = XLSX.utils.json_to_sheet(
-    PRODUCT_IMPORT_GUIDE.map((item) => ({
-      column: item.column,
-      required: item.required ? "yes" : "no",
-      format: item.format,
-    })),
-  );
-  XLSX.utils.book_append_sheet(workbook, products, "Products");
-  XLSX.utils.book_append_sheet(workbook, guide, "Instructions");
-  const bytes = XLSX.write(workbook, { type: "array", bookType: "xlsx" }) as ArrayBuffer;
-  return new Blob([bytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 }
 
 export function validateProductImport(
@@ -247,8 +239,10 @@ export function validateProductImport(
     const sku = mapped.sku ?? "";
     const categoryValue = mapped.category ?? "";
     const category = findCategory(categories, categoryValue);
-    const price = Number(mapped.price ?? "");
-    const stock = Number(mapped.stock ?? "");
+    const priceRaw = mapped.price ?? "";
+    const price = Number(priceRaw);
+    const stockRaw = mapped.stock ?? "";
+    const stock = Number(stockRaw);
     const compareRaw = mapped.compare_at_price ?? "";
     const compareAtPrice = compareRaw === "" ? null : Number(compareRaw);
     const images = imageList(mapped.images ?? "");
@@ -258,19 +252,27 @@ export function validateProductImport(
     const statusRaw = (mapped.status ?? "draft").toLowerCase();
     const status: ProductStatus = statusRaw === "active" ? "active" : "draft";
     const hasVariants = /^(1|yes|true|y)$/i.test(mapped.has_variants ?? "");
-    const errors: string[] = [];
+    const errors: ProductImportIssue[] = [];
 
-    if (!name) errors.push("name");
-    if (!categoryValue) errors.push("category");
-    else if (!category) errors.push("category (not found)");
-    if (!Number.isFinite(price) || price <= 0) errors.push("price");
-    if (compareRaw && (!Number.isFinite(compareAtPrice) || Number(compareAtPrice) < 0)) errors.push("compare_at_price");
-    if (!sku) errors.push("sku");
-    else if (usedSkus.has(sku.toLowerCase())) errors.push("sku (duplicate)");
-    if (!Number.isFinite(stock) || stock < 0 || !Number.isInteger(stock)) errors.push("stock");
-    if (!images.length) errors.push("images");
-    if (badgeRaw && !BADGES.has(badgeRaw)) errors.push("badge");
-    if (mapped.status && statusRaw !== "active" && statusRaw !== "draft") errors.push("status");
+    if (!name) errors.push({ field: "name", key: "importMissingName" });
+    if (!categoryValue) errors.push({ field: "category", key: "importMissingCategory" });
+    else if (!category) errors.push({ field: "category", key: "importUnknownCategory" });
+    if (!priceRaw) errors.push({ field: "price", key: "importMissingPrice" });
+    else if (!Number.isFinite(price) || price <= 0) errors.push({ field: "price", key: "importInvalidPrice" });
+    if (compareRaw && (!Number.isFinite(compareAtPrice) || Number(compareAtPrice) < 0)) {
+      errors.push({ field: "compare_at_price", key: "importInvalidCompare" });
+    }
+    if (!sku) errors.push({ field: "sku", key: "importMissingSku" });
+    else if (usedSkus.has(sku.toLowerCase())) errors.push({ field: "sku", key: "importDuplicateSku" });
+    if (!stockRaw) errors.push({ field: "stock", key: "importMissingStock" });
+    else if (!Number.isFinite(stock) || stock < 0 || !Number.isInteger(stock)) {
+      errors.push({ field: "stock", key: "importInvalidStock" });
+    }
+    if (!images.length) errors.push({ field: "images", key: "importMissingImages" });
+    if (badgeRaw && !BADGES.has(badgeRaw)) errors.push({ field: "badge", key: "importInvalidBadge" });
+    if (mapped.status && statusRaw !== "active" && statusRaw !== "draft") {
+      errors.push({ field: "status", key: "importInvalidStatus" });
+    }
 
     const slug = uniqueSlug(mapped.slug || name || `product-${index + 1}`, usedSlugs);
     if (sku) usedSkus.add(sku.toLowerCase());
@@ -282,7 +284,7 @@ export function validateProductImport(
       slug,
       description: mapped.description ?? "",
       descriptionAr: mapped.description_ar ?? "",
-      category: category?.name || categoryValue,
+      category: category ? categorySelectLabel(category, categories) : categoryValue,
       price: Number.isFinite(price) ? price : 0,
       compareAtPrice: Number.isFinite(compareAtPrice) ? compareAtPrice : null,
       sku,
@@ -301,7 +303,7 @@ export function validateProductImport(
 }
 
 export function importRowToInput(row: ProductImportRow, categories: Category[]): ProductInput | { error: string } {
-  if (row.errors.length) return { error: `Row ${row.row} is missing ${row.errors.join(", ")}.` };
+  if (row.errors.length) return { error: `Row ${row.row} is missing ${row.errors.map((item) => item.field).join(", ")}.` };
   const category = findCategory(categories, row.category);
   if (!category) return { error: `Row ${row.row} has an unknown category.` };
   const hasVariants = row.hasVariants && (row.sizes.length > 0 || row.colors.length > 0);
@@ -342,7 +344,8 @@ export async function parseProductImportFile(file: File): Promise<Record<string,
   }
   const XLSX = await import("xlsx");
   const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const sheetName = workbook.SheetNames.find((name) => name !== "Categories") ?? workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
   if (!sheet) return [];
   return XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "", raw: false });
 }

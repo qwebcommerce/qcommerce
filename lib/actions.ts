@@ -54,6 +54,7 @@ import {
 } from "@/lib/dropship";
 import { productStock } from "@/lib/products";
 import { importRowToInput, validateProductImport } from "@/lib/product-import";
+import { buildSampleXlsxBuffer } from "@/lib/product-import-xlsx";
 import { removeExpenseFile, removeStoredImage, uploadCategoryImage, uploadExpenseFile } from "@/lib/storage";
 import { composeGulfPhone, isValidEmail, parseGulfPhone } from "@/lib/validation";
 import type {
@@ -360,7 +361,7 @@ export async function importProductsAction(records: Record<string, unknown>[]) {
     if (preview.error) return { error: preview.error };
     const invalid = preview.rows.find((row) => row.errors.length);
     if (invalid) {
-      return { error: `Row ${invalid.row} is missing ${invalid.errors.join(", ")}.` };
+      return { error: `Row ${invalid.row} is missing ${invalid.errors.map((item) => item.field).join(", ")}.` };
     }
     for (const row of preview.rows) {
       const payload = importRowToInput(row, categories);
@@ -373,6 +374,21 @@ export async function importProductsAction(records: Record<string, unknown>[]) {
     return { ok: true as const, count: preview.rows.length };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Could not import products." };
+  }
+}
+
+export async function productImportSampleXlsxAction() {
+  await requireAdmin();
+  try {
+    const categories = await listCategories();
+    const buffer = await buildSampleXlsxBuffer(categories);
+    return {
+      ok: true as const,
+      filename: "product-import-sample.xlsx",
+      base64: buffer.toString("base64"),
+    };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Could not create the sample file." };
   }
 }
 
