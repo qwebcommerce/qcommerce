@@ -25,7 +25,6 @@ export default function Footer() {
     [t("company")]: [
       { label: t("aboutBrand", { brand: theme.brand.display }), href: "/about" },
       { label: t("press"), href: "/about" },
-      { label: t("admin"), href: "/admin" },
     ],
   };
 
