@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition, type FormEvent } from "rea
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProductImagesUpload from "@/components/admin/ProductImagesUpload";
+import AdminSelect from "@/components/admin/AdminSelect";
 import { saveProductAction } from "@/lib/actions";
 import { DROPSHIP_UI_ENABLED } from "@/lib/dropship";
 import { nestCategories } from "@/lib/categories";
@@ -77,8 +78,18 @@ export default function ProductForm({
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [source, setSource] = useState<ProductSource>(product?.source ?? "warehouse");
   const [supplierStock, setSupplierStock] = useState(product?.supplierStock ?? product?.stock ?? 0);
-  const selectedId =
-    categories.find((category) => category.slug === product?.categorySlug)?.id ?? tree[0]?.id ?? "";
+  const [categoryId, setCategoryId] = useState(
+    categories.find((category) => category.slug === product?.categorySlug)?.id ?? tree[0]?.id ?? "",
+  );
+  const [badge, setBadge] = useState(product?.badge ?? "");
+  const [status, setStatus] = useState(product?.status ?? "active");
+  const categoryOptions = tree.flatMap((parent) => [
+    { value: parent.id, label: parent.name },
+    ...parent.children.map((child) => ({
+      value: child.id,
+      label: `${parent.name} / ${child.name}`,
+    })),
+  ]);
   const sizeList = csvList(sizes);
   const colorList = csvList(colors);
   const defaults = useMemo(
@@ -200,27 +211,16 @@ export default function ProductForm({
           <small className="admin-field-hint">{hasVariants ? t("variantHint") : t("simpleHint")}</small>
         </fieldset>
         <div className="admin-form-grid">
-          <label>
+          <div>
             <span className="admin-label">{t("productCategory")}</span>
-            <select name="categoryId" defaultValue={selectedId} className="admin-select" required>
-              {tree.map((parent) =>
-                parent.children.length ? (
-                  <optgroup key={parent.id} label={parent.name}>
-                    <option value={parent.id}>{parent.name}</option>
-                    {parent.children.map((child) => (
-                      <option key={child.id} value={child.id}>
-                        {parent.name} / {child.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : (
-                  <option key={parent.id} value={parent.id}>
-                    {parent.name}
-                  </option>
-                ),
-              )}
-            </select>
-          </label>
+            <input type="hidden" name="categoryId" value={categoryId} />
+            <AdminSelect
+              value={categoryId}
+              aria-label={t("productCategory")}
+              options={categoryOptions}
+              onChange={setCategoryId}
+            />
+          </div>
           <label>
             <span className="admin-label">{t("priceLabel")}</span>
             <NumericInput name="price" required value={price} onValue={setPrice} />
@@ -242,37 +242,50 @@ export default function ProductForm({
             <NumericInput name="stock" required value={stock} onValue={setStock} />
             {hasVariants ? <small className="admin-field-hint">{t("totalStock", { count: totalStock })}</small> : null}
           </label>
-          <label>
+          <div>
             <span className="admin-label">{t("badge")}</span>
-            <select name="badge" defaultValue={product?.badge ?? ""} className="admin-select">
-              <option value="">{t("none")}</option>
-              <option value="NEW">NEW</option>
-              <option value="SALE">SALE</option>
-              <option value="BESTSELLER">BESTSELLER</option>
-              <option value="TRENDING">TRENDING</option>
-            </select>
-          </label>
-          <label>
+            <input type="hidden" name="badge" value={badge} />
+            <AdminSelect
+              value={badge}
+              aria-label={t("badge")}
+              options={[
+                { value: "", label: t("none") },
+                { value: "NEW", label: "NEW" },
+                { value: "SALE", label: "SALE" },
+                { value: "BESTSELLER", label: "BESTSELLER" },
+                { value: "TRENDING", label: "TRENDING" },
+              ]}
+              onChange={setBadge}
+            />
+          </div>
+          <div>
             <span className="admin-label">{t("status")}</span>
-            <select name="status" defaultValue={product?.status ?? "active"} className="admin-select">
-              <option value="active">{t("active")}</option>
-              <option value="draft">{t("draft")}</option>
-            </select>
-          </label>
+            <input type="hidden" name="status" value={status} />
+            <AdminSelect
+              value={status}
+              aria-label={t("status")}
+              options={[
+                { value: "active", label: t("active") },
+                { value: "draft", label: t("draft") },
+              ]}
+              onChange={setStatus}
+            />
+          </div>
           {DROPSHIP_UI_ENABLED ? (
-            <label>
+            <div>
               <span className="admin-label">{t("productSource")}</span>
-              <select
-                name="source"
-                className="admin-select"
+              <input type="hidden" name="source" value={source} />
+              <AdminSelect
                 value={source}
-                onChange={(event) => setSource(event.target.value as ProductSource)}
-              >
-                <option value="warehouse">{t("sourceWarehouse")}</option>
-                <option value="aliexpress">{t("sourceAliexpress")}</option>
-                <option value="temu">{t("sourceTemu")}</option>
-              </select>
-            </label>
+                aria-label={t("productSource")}
+                options={[
+                  { value: "warehouse", label: t("sourceWarehouse") },
+                  { value: "aliexpress", label: t("sourceAliexpress") },
+                  { value: "temu", label: t("sourceTemu") },
+                ]}
+                onChange={(value) => setSource(value as ProductSource)}
+              />
+            </div>
           ) : (
             <input type="hidden" name="source" value={product?.source ?? "warehouse"} />
           )}

@@ -1,7 +1,6 @@
 import CategoryGrid from "@/components/storefront/CategoryGrid";
 import FeaturedProducts from "@/components/storefront/FeaturedProducts";
 import HeroSlider from "@/components/storefront/HeroSlider";
-import InstagramGrid from "@/components/storefront/InstagramGrid";
 import LoadingScreen from "@/components/storefront/LoadingScreen";
 import MarqueeTicker from "@/components/storefront/MarqueeTicker";
 import NewArrivals from "@/components/storefront/NewArrivals";
@@ -25,7 +24,6 @@ export default async function HomePage() {
       <CategoryGrid categories={categories} />
       <FeaturedProducts products={products} />
       <PressSection />
-      <InstagramGrid />
       <Newsletter />
     </>
   );
