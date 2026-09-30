@@ -4,15 +4,17 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AdminModal from "@/components/admin/AdminModal";
+import AdminSelect from "@/components/admin/AdminSelect";
 import ProductImport from "@/components/admin/ProductImport";
 import StatusBadge from "@/components/admin/StatusBadge";
 import { deleteProductAction } from "@/lib/actions";
 import { DROPSHIP_UI_ENABLED } from "@/lib/dropship";
 import { formatQar } from "@/lib/format";
+import type { MessageKey } from "@/lib/i18n";
 import { matchesProductSearch, productPriceRange, productStock } from "@/lib/products";
 import { usePreferences } from "@/lib/preferences";
 import { useToast } from "@/lib/toast";
-import type { Category, Product } from "@/types";
+import type { Category, Product, ProductStatus } from "@/types";
 
 const PAGE_SIZE = 8;
 
@@ -29,13 +31,18 @@ export default function ProductsManager({
   const toast = useToast();
   const router = useRouter();
   const [query, setQuery] = useState(initialQuery);
+  const [statusFilter, setStatusFilter] = useState<"all" | ProductStatus>("all");
   const [page, setPage] = useState(1);
   const [pending, startTransition] = useTransition();
   const [deleting, setDeleting] = useState<Product | null>(null);
   const [error, setError] = useState("");
   const filtered = useMemo(
-    () => products.filter((product) => matchesProductSearch(product, query)),
-    [products, query],
+    () =>
+      products.filter((product) => {
+        if (statusFilter !== "all" && product.status !== statusFilter) return false;
+        return matchesProductSearch(product, query);
+      }),
+    [products, query, statusFilter],
   );
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount);
@@ -50,7 +57,7 @@ export default function ProductsManager({
 
   useEffect(() => {
     setPage(1);
-  }, [query]);
+  }, [query, statusFilter]);
 
   useEffect(() => {
     if (page > pageCount) setPage(pageCount);
@@ -106,6 +113,17 @@ export default function ProductsManager({
               placeholder={t("productSearch")}
             />
           </label>
+          <AdminSelect
+            className="admin-filter"
+            value={statusFilter}
+            onChange={(value) => setStatusFilter(value as "all" | ProductStatus)}
+            aria-label={t("status")}
+            options={[
+              { value: "all", label: t("allStatuses") },
+              { value: "active", label: t("active") },
+              { value: "draft", label: t("draft") },
+            ]}
+          />
         </div>
       ) : null}
 
@@ -191,7 +209,7 @@ export default function ProductsManager({
                       </td>
                     ) : null}
                     <td data-label={t("status")}>
-                      <StatusBadge status={product.status} />
+                      <StatusBadge status={product.status} label={t(product.status as MessageKey)} />
                     </td>
                   </tr>
                 ))}

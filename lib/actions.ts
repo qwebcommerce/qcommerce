@@ -40,7 +40,7 @@ import {
 import { mapVariants } from "@/lib/db/mappers";
 import { notifyOrderCreated, notifyOrderReadyToShip, shouldSendReadyToShip } from "@/lib/email/orders";
 import { isValidExpensePair, MAX_EXPENSE_FILES, todayIsoDate } from "@/lib/expenses";
-import { normalizePromo, promoIsActive } from "@/lib/format";
+import { normalizePromo, promoIsActive, slugify } from "@/lib/format";
 import {
   applyShipmentAttempt,
   canManualRetry,
@@ -317,7 +317,7 @@ export async function saveProductAction(formData: FormData) {
     const payload: ProductInput = {
       name: formString(formData, "name"),
       nameAr: formString(formData, "nameAr"),
-      slug: formString(formData, "slug") || undefined,
+      slug: slugify(formString(formData, "name")) || undefined,
       description: formString(formData, "description"),
       descriptionAr: formString(formData, "descriptionAr"),
       category: selected?.name || formString(formData, "category"),
@@ -484,7 +484,7 @@ export async function saveCategoryAction(formData: FormData) {
       parentId: parentId ? parentId : null,
       name: formString(formData, "name"),
       nameAr: formString(formData, "nameAr"),
-      slug: formString(formData, "slug"),
+      slug: slugify(formString(formData, "name")),
       subtitle: formString(formData, "subtitle"),
       subtitleAr: formString(formData, "subtitleAr"),
       image,
@@ -581,6 +581,7 @@ export async function importDropshipProductAction(formData: FormData) {
     const product = await createProduct({
       name,
       nameAr: "",
+      slug: slugify(name) || undefined,
       description: `Imported from ${parsed.source === "aliexpress" ? "AliExpress" : "Temu"}. Review before publishing.`,
       descriptionAr: "",
       category: selected.name,

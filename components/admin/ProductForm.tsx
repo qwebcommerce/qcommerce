@@ -7,7 +7,6 @@ import ProductImagesUpload from "@/components/admin/ProductImagesUpload";
 import { saveProductAction } from "@/lib/actions";
 import { DROPSHIP_UI_ENABLED } from "@/lib/dropship";
 import { nestCategories } from "@/lib/categories";
-import { slugify } from "@/lib/format";
 import { csvList, productStock, syncProductVariants } from "@/lib/products";
 import { usePreferences } from "@/lib/preferences";
 import { useToast } from "@/lib/toast";
@@ -64,8 +63,6 @@ export default function ProductForm({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [name, setName] = useState(product?.name ?? "");
-  const [slug, setSlug] = useState(product?.slug ?? "");
-  const [slugTouched, setSlugTouched] = useState(Boolean(product));
   const [price, setPrice] = useState(product?.price ?? 0);
   const [compareAtPrice, setCompareAtPrice] = useState(product?.compareAtPrice ?? 0);
   const [sku, setSku] = useState(product?.sku ?? "");
@@ -100,11 +97,6 @@ export default function ProductForm({
     // defaults applied only to newly created combos inside syncProductVariants
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasVariants, sizes, colors]);
-
-  function onName(value: string) {
-    setName(value);
-    if (!slugTouched) setSlug(slugify(value));
-  }
 
   function patchVariant(id: string, patch: Partial<ProductVariant>) {
     setVariants((current) => current.map((variant) => (variant.id === id ? { ...variant, ...patch } : variant)));
@@ -157,7 +149,7 @@ export default function ProductForm({
         <div className="admin-lang-grid">
           <label>
             <span className="admin-label">{t("nameEnglish")}</span>
-            <input name="name" required className="admin-input" value={name} onChange={(event) => onName(event.target.value)} />
+            <input name="name" required className="admin-input" value={name} onChange={(event) => setName(event.target.value)} />
           </label>
           <label>
             <span className="admin-label">{t("nameArabic")}</span>
@@ -187,19 +179,6 @@ export default function ProductForm({
             />
           </label>
         </div>
-        <label>
-          <span className="admin-label">{t("categorySlug")}</span>
-          <input
-            name="slug"
-            className="admin-input"
-            value={slug}
-            onChange={(event) => {
-              setSlug(event.target.value);
-              setSlugTouched(true);
-            }}
-          />
-          <small className="admin-field-hint">{t("slugHint")}</small>
-        </label>
         <fieldset className="admin-type-toggle">
           <legend className="admin-label">{t("productType")}</legend>
           <div className="admin-type-toggle__row">

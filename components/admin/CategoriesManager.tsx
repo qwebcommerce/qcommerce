@@ -6,7 +6,6 @@ import AdminModal from "@/components/admin/AdminModal";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { deleteCategoryAction, saveCategoryAction } from "@/lib/actions";
 import { filterCategoryTree, nestCategories } from "@/lib/categories";
-import { slugify } from "@/lib/format";
 import { usePreferences } from "@/lib/preferences";
 import { useToast } from "@/lib/toast";
 import type { Category } from "@/types";
@@ -18,14 +17,12 @@ type Editor = {
   parentId: string | null;
   name: string;
   nameAr: string;
-  slug: string;
   subtitle: string;
   subtitleAr: string;
   image: string;
   file: File | null;
   removeImage: boolean;
   sortOrder: number;
-  slugTouched: boolean;
 };
 
 type Deleting = {
@@ -75,14 +72,12 @@ export default function CategoriesManager({
       parentId,
       name: "",
       nameAr: "",
-      slug: "",
       subtitle: "",
       subtitleAr: "",
       image: "",
       file: null,
       removeImage: false,
       sortOrder: siblings.length + 1,
-      slugTouched: false,
     });
   }
 
@@ -93,26 +88,17 @@ export default function CategoriesManager({
       parentId: category.parentId,
       name: category.name,
       nameAr: category.nameAr,
-      slug: category.slug,
       subtitle: category.subtitle,
       subtitleAr: category.subtitleAr,
       image: category.image,
       file: null,
       removeImage: false,
       sortOrder: category.sortOrder,
-      slugTouched: true,
     });
   }
 
   function setName(name: string) {
-    setEditor((current) => {
-      if (!current) return current;
-      return {
-        ...current,
-        name,
-        slug: current.slugTouched ? current.slug : slugify(name),
-      };
-    });
+    setEditor((current) => (current ? { ...current, name } : current));
   }
 
   function save() {
@@ -122,7 +108,6 @@ export default function CategoriesManager({
     if (editor.parentId) form.set("parentId", editor.parentId);
     form.set("name", editor.name);
     form.set("nameAr", editor.nameAr);
-    form.set("slug", editor.slug);
     form.set("subtitle", editor.subtitle);
     form.set("subtitleAr", editor.subtitleAr);
     if (editor.file) form.set("imageFile", editor.file);
@@ -362,15 +347,6 @@ export default function CategoriesManager({
               />
             </label>
           </div>
-          <label>
-            <span className="admin-label">{t("categorySlug")}</span>
-            <input
-              className="admin-input"
-              value={editor.slug}
-              onChange={(event) => setEditor({ ...editor, slug: event.target.value, slugTouched: true })}
-            />
-            <small className="admin-field-hint">{t("slugHint")}</small>
-          </label>
           <ImageUpload
             value={editor.removeImage ? "" : editor.image}
             file={editor.file}

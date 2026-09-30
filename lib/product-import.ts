@@ -9,7 +9,6 @@ export const PRODUCT_IMPORT_REQUIRED = ["name", "category", "price", "sku", "sto
 export const PRODUCT_IMPORT_COLUMNS = [
   "name",
   "name_ar",
-  "slug",
   "description",
   "description_ar",
   "category",
@@ -32,8 +31,6 @@ const HEADER_ALIASES: Record<string, (typeof PRODUCT_IMPORT_COLUMNS)[number]> = 
   title: "name",
   name_ar: "name_ar",
   name_arabic: "name_ar",
-  slug: "slug",
-  url_slug: "slug",
   description: "description",
   description_en: "description",
   description_english: "description",
@@ -169,7 +166,6 @@ export function sampleImportRows(categories: Category[]): Record<(typeof PRODUCT
     {
       name: "Classic Court Shirt",
       name_ar: "قميص الملعب الكلاسيكي",
-      slug: "",
       description: "Breathable performance shirt for training and match days.",
       description_ar: "قميص مريح للتدريب وأيام المباريات.",
       category,
@@ -187,7 +183,6 @@ export function sampleImportRows(categories: Category[]): Record<(typeof PRODUCT
     {
       name: "Match Shorts",
       name_ar: "شورت المباراة",
-      slug: "",
       description: "Lightweight shorts with a secure waistband.",
       description_ar: "شورت خفيف بحزام مريح.",
       category: secondCategory,
@@ -274,7 +269,7 @@ export function validateProductImport(
       errors.push({ field: "status", key: "importInvalidStatus" });
     }
 
-    const slug = uniqueSlug(mapped.slug || name || `product-${index + 1}`, usedSlugs);
+    const slug = uniqueSlug(name || `product-${index + 1}`, usedSlugs);
     if (sku) usedSkus.add(sku.toLowerCase());
 
     rows.push({
