@@ -268,7 +268,7 @@ export default function ProductForm({
                 { value: "active", label: t("active") },
                 { value: "draft", label: t("draft") },
               ]}
-              onChange={setStatus}
+              onChange={(value) => setStatus(value === "draft" ? "draft" : "active")}
             />
           </div>
           {DROPSHIP_UI_ENABLED ? (
