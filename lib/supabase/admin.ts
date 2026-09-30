@@ -12,7 +12,7 @@ export function createAdminSupabase() {
         const incoming = new Headers(init?.headers);
         const headers = new Headers();
         headers.set("apikey", key);
-        for (const name of ["Accept", "Content-Type", "Prefer", "Accept-Profile", "Content-Profile"]) {
+        for (const name of ["Accept", "Content-Type", "Prefer", "Accept-Profile", "Content-Profile", "Authorization"]) {
           const value = incoming.get(name);
           if (value) headers.set(name, value);
         }

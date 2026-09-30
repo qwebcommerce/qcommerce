@@ -81,6 +81,15 @@ function csv(value: string) {
   return value.split(",").map((v) => v.trim()).filter(Boolean);
 }
 
+function caughtMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message: unknown }).message;
+    if (typeof message === "string" && message.trim()) return message;
+  }
+  return fallback;
+}
+
 async function fulfillDropshipShipments(
   order: Order,
   options: { shipmentId?: string } = {},
@@ -128,15 +137,24 @@ export async function logoutAdminAction() {
 }
 
 export async function registerCustomerAction(formData: FormData) {
+  const email = formString(formData, "email");
+  const fullName = formString(formData, "fullName");
+  const password = formString(formData, "password");
+  if (!fullName) return { error: "missingName" as const };
+  if (!isValidEmail(email)) return { error: "invalidEmail" as const };
+  if (password.length < 6) return { error: "passwordTooShort" as const };
   try {
     const customer = await createCustomer({
-      email: formString(formData, "email"),
-      fullName: formString(formData, "fullName"),
-      password: formString(formData, "password"),
+      email,
+      fullName,
+      password,
     });
     await setCustomerSession({ id: customer.id, email: customer.email, fullName: customer.fullName });
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Could not create account" };
+    const message = caughtMessage(error, "").toLowerCase();
+    const errorKey = message.includes("already exists") || message.includes("duplicate") ? "emailTaken" : "accountCreateFailed";
+    console.error("Could not create account:", caughtMessage(error, errorKey));
+    return { error: errorKey as const };
   }
   redirect(safeNextPath(formString(formData, "next")));
 }
@@ -146,7 +164,11 @@ export async function loginCustomerAction(formData: FormData) {
     const customer = await authenticateCustomer(formString(formData, "email"), formString(formData, "password"));
     await setCustomerSession({ id: customer.id, email: customer.email, fullName: customer.fullName });
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Could not sign in" };
+    const message = caughtMessage(error, "");
+    if (message.includes("blocked")) return { error: "accountBlocked" as const };
+    if (message.includes("admin sign-in")) return { error: "useAdminSignIn" as const };
+    if (message.includes("Invalid email") || message.includes("password")) return { error: "invalidCredentials" as const };
+    return { error: "accountSignInFailed" as const };
   }
   redirect(safeNextPath(formString(formData, "next")));
 }

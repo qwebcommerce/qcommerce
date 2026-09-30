@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import AdminModal from "@/components/admin/AdminModal";
+import AdminSelect from "@/components/admin/AdminSelect";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { deleteCategoryAction, saveCategoryAction } from "@/lib/actions";
 import { filterCategoryTree, nestCategories } from "@/lib/categories";
@@ -354,24 +355,22 @@ export default function CategoriesManager({
             onFile={(file) => setEditor({ ...editor, file, removeImage: false })}
             onRemove={() => setEditor({ ...editor, file: null, image: "", removeImage: true })}
           />
-          {editor.id && categories.some((category) => category.parentId === editor.id) ? null : editor.id ? (
-            <label>
+          {editor.id && editor.parentId ? (
+            <div>
               <span className="admin-label">{t("parentCategory")}</span>
-              <select
-                className="admin-select"
-                value={editor.parentId ?? ""}
-                onChange={(event) => setEditor({ ...editor, parentId: event.target.value || null })}
-              >
-                <option value="">{t("makeTopLevel")}</option>
-                {tree
-                  .filter((parent) => parent.id !== editor.id)
-                  .map((parent) => (
-                    <option key={parent.id} value={parent.id}>
-                      {parent.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
+              <AdminSelect
+                preferUp
+                value={editor.parentId}
+                aria-label={t("parentCategory")}
+                options={[
+                  { value: "", label: t("makeTopLevel") },
+                  ...tree
+                    .filter((parent) => parent.id !== editor.id)
+                    .map((parent) => ({ value: parent.id, label: parent.name })),
+                ]}
+                onChange={(value) => setEditor({ ...editor, parentId: value || null })}
+              />
+            </div>
           ) : null}
           <label>
             <span className="admin-label">{t("sortOrder")}</span>

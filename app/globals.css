@@ -2603,6 +2603,8 @@ html[lang="ar"] .pref-toggle--theme .pref-toggle__opt { letter-spacing: 0; }
   gap: 0.85rem;
   overflow: auto;
   min-height: 0;
+  flex: 1 1 auto;
+  -webkit-overflow-scrolling: touch;
   padding-inline-end: 0.15rem;
 }
 .admin-modal__footer {
@@ -2752,7 +2754,8 @@ html[dir="rtl"] .admin-select--compact {
 .admin-select-wrap.is-open {
   z-index: 40;
 }
-.admin-form-card .admin-select-wrap {
+.admin-form-card .admin-select-wrap,
+.admin-modal .admin-select-wrap {
   display: block;
   width: 100%;
   min-width: 0;
@@ -2778,7 +2781,8 @@ html[dir="rtl"] .admin-select--compact {
   cursor: pointer;
   text-align: start;
 }
-.admin-form-card .admin-select-trigger {
+.admin-form-card .admin-select-trigger,
+.admin-modal .admin-select-trigger {
   display: flex;
   width: 100%;
   min-height: 2.75rem;
@@ -2808,12 +2812,8 @@ html[dir="rtl"] .admin-select--compact {
 }
 .admin-select-trigger svg { flex-shrink: 0; color: var(--muted); }
 .admin-select-menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  inset-inline-start: 0;
-  width: 100%;
-  z-index: 40;
-  max-height: 16rem;
+  position: fixed;
+  z-index: 200;
   overflow: auto;
   padding: 0.35rem;
   border-radius: 0.9rem;
@@ -3034,8 +3034,9 @@ html[dir="rtl"] .admin-select--compact {
   }
   .admin-modal {
     width: 100%;
-    max-height: none;
+    max-height: 100dvh;
     height: 100dvh;
+    overflow: hidden;
     border-radius: 0;
     border: 0;
     animation: admin-drawer-in 0.38s cubic-bezier(0.22, 1, 0.36, 1);

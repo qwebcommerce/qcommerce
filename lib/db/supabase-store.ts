@@ -481,7 +481,11 @@ export async function createCustomer(input: CustomerInput): Promise<Customer> {
     })
     .select("*")
     .single();
-  if (error) throw error;
+  if (error) {
+    if (error.code === "23505") throw new Error("An account with this email already exists.");
+    throw new Error(error.message || "Could not create account.");
+  }
+  if (!data) throw new Error("Could not create account.");
   return mapCustomer(data);
 }
 
