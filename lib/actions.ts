@@ -154,7 +154,8 @@ export async function registerCustomerAction(formData: FormData) {
     const message = caughtMessage(error, "").toLowerCase();
     const errorKey = message.includes("already exists") || message.includes("duplicate") ? "emailTaken" : "accountCreateFailed";
     console.error("Could not create account:", caughtMessage(error, errorKey));
-    return { error: errorKey as const };
+    if (errorKey === "emailTaken") return { error: "emailTaken" as const };
+    return { error: "accountCreateFailed" as const };
   }
   redirect(safeNextPath(formString(formData, "next")));
 }
