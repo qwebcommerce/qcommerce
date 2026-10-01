@@ -99,14 +99,16 @@ export default function ExpenseForm({ expense }: { expense?: Expense }) {
           </label>
           <label>
             <span className="admin-label">{t("expenseDate")}</span>
-            <input
-              name="incurredOn"
-              type="date"
-              required
-              className="admin-input"
-              value={incurredOn}
-              onChange={(event) => setIncurredOn(event.target.value)}
-            />
+            <span className="admin-date">
+              <input
+                name="incurredOn"
+                type="date"
+                required
+                className="admin-input"
+                value={incurredOn}
+                onChange={(event) => setIncurredOn(event.target.value)}
+              />
+            </span>
           </label>
         </div>
         <div className="admin-form-grid">
