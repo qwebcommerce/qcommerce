@@ -222,7 +222,7 @@ export default function ExpensesManager({ expenses }: { expenses: Expense[] }) {
                               download={file.name}
                               title={`${file.name} · ${formatFileSize(file.size)}`}
                             >
-                              {t("expenseDownload")} · {file.name}
+                              {file.name}
                             </a>
                           ))}
                         </div>

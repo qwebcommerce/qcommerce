@@ -220,7 +220,7 @@ export default function ProductImport({
                   </div>
                   {row.images.length > 1 ? (
                     <div className="admin-import-card__thumbs">
-                      {row.images.slice(1, 5).map((image) => (
+                      {row.images.slice(1, 5).filter(Boolean).map((image) => (
                         <img key={image} src={image} alt="" />
                       ))}
                     </div>

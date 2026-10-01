@@ -6,7 +6,7 @@ import AdminModal from "@/components/admin/AdminModal";
 import AdminSelect from "@/components/admin/AdminSelect";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { deleteCategoryAction, saveCategoryAction } from "@/lib/actions";
-import { filterCategoryTree, nestCategories } from "@/lib/categories";
+import { filterCategoryTree, nestCategories, nextCategorySortOrder } from "@/lib/categories";
 import { usePreferences } from "@/lib/preferences";
 import { useToast } from "@/lib/toast";
 import type { Category } from "@/types";
@@ -78,7 +78,7 @@ export default function CategoriesManager({
       image: "",
       file: null,
       removeImage: false,
-      sortOrder: siblings.length + 1,
+      sortOrder: nextCategorySortOrder(siblings),
     });
   }
 

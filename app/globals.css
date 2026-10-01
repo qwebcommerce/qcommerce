@@ -1352,6 +1352,17 @@ body:has(.account-tabs) .account-portal {
 .admin-input {
   min-height: 2.75rem;
 }
+.admin-input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+}
+[data-theme="dark"] .admin-input[type="date"] {
+  color-scheme: dark;
+}
+[data-theme="dark"] .admin-input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.9;
+}
 .admin-select {
   appearance: none;
   cursor: pointer;
@@ -2317,6 +2328,9 @@ html[lang="ar"] .pref-toggle--theme .pref-toggle__opt { letter-spacing: 0; }
 .admin-files {
   display: grid;
   gap: 0.75rem;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
   border: 1px dashed var(--sand);
   border-radius: 1rem;
   background: var(--off-white);
@@ -2328,9 +2342,10 @@ html[lang="ar"] .pref-toggle--theme .pref-toggle__opt { letter-spacing: 0; }
 }
 .admin-file-card {
   display: grid;
-  grid-template-columns: 72px 1fr;
+  grid-template-columns: 72px minmax(0, 1fr);
   gap: 0.85rem;
   align-items: center;
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--sand);
   border-radius: 0.9rem;
@@ -2355,6 +2370,10 @@ html[lang="ar"] .pref-toggle--theme .pref-toggle__opt { letter-spacing: 0; }
   object-fit: cover;
   display: block;
 }
+.admin-file-card__meta {
+  min-width: 0;
+  overflow: hidden;
+}
 .admin-file-card__meta strong {
   display: block;
   font-size: 0.88rem;
@@ -2374,11 +2393,18 @@ html[lang="ar"] .pref-toggle--theme .pref-toggle__opt { letter-spacing: 0; }
   flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 0.45rem;
+  min-width: 0;
+}
+.admin-file-card__actions a,
+.admin-file-card__actions button {
+  max-width: 100%;
 }
 .admin-file-add {
   display: grid;
   place-items: center;
   min-height: 4.5rem;
+  min-width: 0;
+  overflow: hidden;
   border: 1px dashed var(--sand);
   border-radius: 0.9rem;
   color: var(--muted);
@@ -2386,15 +2412,29 @@ html[lang="ar"] .pref-toggle--theme .pref-toggle__opt { letter-spacing: 0; }
   font-size: 0.86rem;
 }
 .admin-file-add input { display: none; }
+.admin-file-add span {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 0.85rem;
+}
 .admin-file-add:hover { border-color: var(--gold); color: var(--black); }
 .admin-file-links {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0.25rem;
+  min-width: 0;
+  max-width: 16rem;
+  width: 100%;
+  max-height: 6.75rem;
+  overflow: auto;
 }
 .admin-file-links a {
-  max-width: 16rem;
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -3092,6 +3132,14 @@ html[dir="rtl"] .admin-select--compact {
     justify-content: space-between;
     align-items: center;
     gap: 0.75rem;
+  }
+  .admin-table td:has(.admin-file-links) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+  }
+  .admin-file-links {
+    max-width: none;
   }
   .admin-table td[data-label]::before {
     content: attr(data-label);

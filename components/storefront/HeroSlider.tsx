@@ -33,7 +33,7 @@ export default function HeroSlider() {
             zIndex: i === current ? 1 : 0,
           }}
         >
-          <img src={s.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 25%" }} />
+          {s.img ? <img src={s.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 25%" }} /> : null}
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.72) 100%)" }} />
         </div>
       ))}

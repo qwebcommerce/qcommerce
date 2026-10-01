@@ -26,7 +26,11 @@ export default function CartDrawer() {
           {items.length === 0 && <p style={{ color: "var(--muted)" }}>{t("bagEmpty")}</p>}
           {items.map((item) => (
             <div key={item.id} style={{ display: "grid", gridTemplateColumns: "80px 1fr auto", gap: "0.85rem" }}>
-              <img src={item.image} alt="" style={{ width: "80px", height: "106px", objectFit: "cover", background: "var(--sand)" }} />
+              {item.image ? (
+                <img src={item.image} alt="" style={{ width: "80px", height: "106px", objectFit: "cover", background: "var(--sand)" }} />
+              ) : (
+                <div style={{ width: "80px", height: "106px", background: "var(--sand)" }} />
+              )}
               <div>
                 <Link href={`/product/${item.slug}`} onClick={() => setCartOpen(false)} style={{ fontWeight: 700, textDecoration: "none", color: "inherit", fontSize: "0.9rem" }}>
                   {item.name}

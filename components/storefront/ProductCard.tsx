@@ -49,14 +49,14 @@ export default function ProductCard({
     <article className="product-card" style={{ width: width ? `${width}px` : undefined, flexShrink: width ? 0 : undefined, scrollSnapAlign: width ? "start" : undefined }}>
       <div className="prod-img" style={width ? { width: `${width}px` } : undefined}>
         <Link href={`/product/${product.slug}`} style={{ position: "absolute", inset: 0 }}>
-          <img src={cover} alt={name} loading="lazy" />
+          {cover ? <img src={cover} alt={name} loading="lazy" /> : null}
         </Link>
         {style && product.badge && (
           <span
             style={{
               position: "absolute",
               top: "0.75rem",
-              left: "0.75rem",
+              insetInlineStart: "0.75rem",
               zIndex: 1,
               backgroundColor: style.bg,
               color: style.color,

@@ -26,7 +26,7 @@ export default function CartPage() {
           <div className="cart-lines">
             {items.map((item) => (
               <article key={item.id} className="cart-line">
-                <img src={item.image} alt="" className="cart-line__image" />
+                {item.image ? <img src={item.image} alt="" className="cart-line__image" /> : <div className="cart-line__image" />}
                 <div className="cart-line__info">
                   <Link href={`/product/${item.slug}`}>{item.name}</Link>
                   <p>{[item.size, item.color].filter(Boolean).join(" · ")}</p>

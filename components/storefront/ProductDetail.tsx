@@ -34,7 +34,7 @@ export default function ProductDetail({ product, related }: { product: Product; 
   const sku = variant?.sku || product.sku;
   const gallery = useMemo(() => {
     const extras = product.variants.map((item) => item.image).filter(Boolean);
-    return Array.from(new Set([...(product.images ?? []), ...extras]));
+    return Array.from(new Set([...(product.images ?? []), ...extras].filter(Boolean)));
   }, [product]);
 
   useEffect(() => {
@@ -52,7 +52,7 @@ export default function ProductDetail({ product, related }: { product: Product; 
       <div className="product-detail">
         <div>
           <div className="img-zoom" style={{ background: "var(--sand)", aspectRatio: "3/4" }}>
-            <img src={image} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            {image ? <img src={image} alt={name} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : null}
           </div>
           {gallery.length > 1 && (
             <div style={{ display: "flex", gap: "0.6rem", marginTop: "0.75rem" }}>
