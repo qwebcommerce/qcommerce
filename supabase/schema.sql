@@ -12,7 +12,8 @@ create table if not exists public.categories (
   subtitle text default '',
   subtitle_ar text not null default '',
   image text not null default '',
-  sort_order int not null default 0
+  sort_order int not null default 0,
+  created_at timestamptz not null default now()
 );
 
 alter table public.categories add column if not exists parent_id uuid references public.categories(id) on delete restrict;
@@ -20,6 +21,7 @@ alter table public.categories add column if not exists name_ar text not null def
 alter table public.categories add column if not exists subtitle_ar text not null default '';
 alter table public.categories alter column image set default '';
 alter table public.categories alter column image drop not null;
+alter table public.categories add column if not exists created_at timestamptz not null default now();
 
 update public.categories set name_ar = 'تيشيرتات', subtitle_ar = 'الأساسيات وما بعدها' where slug = 't-shirts' and name_ar = '';
 update public.categories set name_ar = 'قمصان', subtitle_ar = 'كاجوال أنيق' where slug = 'shirts' and name_ar = '';

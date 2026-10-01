@@ -117,7 +117,7 @@ export function categorySelectLabel(category: Category, categories: Category[]) 
 }
 
 export function categorySelectValues(categories: Category[]) {
-  const sorted = [...categories].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+  const sorted = [...categories].sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "") || a.name.localeCompare(b.name));
   const labels = sorted.map((category) => categorySelectLabel(category, categories));
   const counts = labels.reduce<Record<string, number>>((acc, label) => {
     acc[label] = (acc[label] ?? 0) + 1;

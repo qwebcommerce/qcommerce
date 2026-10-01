@@ -51,6 +51,7 @@ type CategoryRow = {
   subtitle_ar: string | null;
   image: string | null;
   sort_order: number;
+  created_at?: string | null;
 };
 
 type OrderRow = {
@@ -144,6 +145,7 @@ export function mapCategory(row: CategoryRow): Category {
     subtitleAr: row.subtitle_ar ?? "",
     image: row.image ?? "",
     sortOrder: row.sort_order,
+    createdAt: row.created_at ?? "",
   };
 }
 

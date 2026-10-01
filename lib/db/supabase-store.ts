@@ -186,9 +186,13 @@ export async function deleteProduct(id: string): Promise<void> {
 
 export async function listCategories(): Promise<Category[]> {
   const sb = client();
-  const { data, error } = await sb.from("categories").select("*").order("sort_order").order("name");
-  if (error) throw error;
-  return (data ?? []).map(mapCategory);
+  const newest = await sb.from("categories").select("*").order("created_at", { ascending: false });
+  if (newest.error) {
+    const fallback = await sb.from("categories").select("*").order("name");
+    if (fallback.error) throw newest.error;
+    return (fallback.data ?? []).map(mapCategory);
+  }
+  return (newest.data ?? []).map(mapCategory);
 }
 
 export async function getCategoryById(id: string): Promise<Category | null> {
@@ -228,7 +232,6 @@ export async function upsertCategory(input: CategoryInput): Promise<Category> {
     subtitle: input.subtitle?.trim() ?? "",
     subtitle_ar: input.subtitleAr?.trim() ?? "",
     image: input.image?.trim() ?? "",
-    sort_order: input.sortOrder ?? 0,
     parent_id: parentId,
   };
 
@@ -525,7 +528,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
 export async function listExpenses(): Promise<Expense[]> {
   const sb = client();
-  const { data, error } = await sb.from("expenses").select("*").order("incurred_on", { ascending: false }).order("created_at", { ascending: false });
+  const { data, error } = await sb.from("expenses").select("*").order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map(mapExpense);
 }

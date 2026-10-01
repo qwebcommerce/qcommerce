@@ -511,7 +511,6 @@ export async function saveCategoryAction(formData: FormData) {
       subtitle: formString(formData, "subtitle"),
       subtitleAr: formString(formData, "subtitleAr"),
       image,
-      sortOrder: Number(formString(formData, "sortOrder") || 0),
     });
     revalidatePath("/admin/categories");
     revalidatePath("/");

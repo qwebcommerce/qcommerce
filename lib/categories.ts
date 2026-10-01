@@ -3,13 +3,8 @@ import { themeCategoryName, type Locale } from "@/theme.config";
 
 export type CategoryTree = Category & { children: Category[] };
 
-function byCategoryOrder(a: Category, b: Category) {
-  return a.sortOrder - b.sortOrder || a.name.localeCompare(b.name);
-}
-
-export function nextCategorySortOrder(siblings: Pick<Category, "sortOrder">[]) {
-  if (!siblings.length) return 0;
-  return Math.min(...siblings.map((category) => category.sortOrder)) - 1;
+function byNewest(a: Category, b: Category) {
+  return (b.createdAt || "").localeCompare(a.createdAt || "") || a.name.localeCompare(b.name);
 }
 
 export function nestCategories(categories: Category[]): CategoryTree[] {
@@ -20,11 +15,11 @@ export function nestCategories(categories: Category[]): CategoryTree[] {
     list.push(category);
     byParent.set(category.parentId, list);
   }
-  for (const list of byParent.values()) list.sort(byCategoryOrder);
+  for (const list of byParent.values()) list.sort(byNewest);
   return categories
     .filter((category) => !category.parentId)
     .slice()
-    .sort(byCategoryOrder)
+    .sort(byNewest)
     .map((category) => ({
       ...category,
       children: byParent.get(category.id) ?? [],

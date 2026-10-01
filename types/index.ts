@@ -40,6 +40,7 @@ export type Category = {
   subtitleAr: string;
   image: string;
   sortOrder: number;
+  createdAt: string;
 };
 
 export type CategoryInput = {

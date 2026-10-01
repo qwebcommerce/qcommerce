@@ -6,7 +6,7 @@ import AdminModal from "@/components/admin/AdminModal";
 import AdminSelect from "@/components/admin/AdminSelect";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { deleteCategoryAction, saveCategoryAction } from "@/lib/actions";
-import { filterCategoryTree, nestCategories, nextCategorySortOrder } from "@/lib/categories";
+import { filterCategoryTree, nestCategories } from "@/lib/categories";
 import { usePreferences } from "@/lib/preferences";
 import { useToast } from "@/lib/toast";
 import type { Category } from "@/types";
@@ -23,7 +23,6 @@ type Editor = {
   image: string;
   file: File | null;
   removeImage: boolean;
-  sortOrder: number;
 };
 
 type Deleting = {
@@ -65,9 +64,6 @@ export default function CategoriesManager({
   }, [page, pageCount]);
 
   function openCreate(parentId: string | null) {
-    const siblings = parentId
-      ? categories.filter((category) => category.parentId === parentId)
-      : categories.filter((category) => !category.parentId);
     setError("");
     setEditor({
       parentId,
@@ -78,7 +74,6 @@ export default function CategoriesManager({
       image: "",
       file: null,
       removeImage: false,
-      sortOrder: nextCategorySortOrder(siblings),
     });
   }
 
@@ -94,7 +89,6 @@ export default function CategoriesManager({
       image: category.image,
       file: null,
       removeImage: false,
-      sortOrder: category.sortOrder,
     });
   }
 
@@ -113,7 +107,6 @@ export default function CategoriesManager({
     form.set("subtitleAr", editor.subtitleAr);
     if (editor.file) form.set("imageFile", editor.file);
     if (editor.removeImage) form.set("removeImage", "1");
-    form.set("sortOrder", String(editor.sortOrder));
     startTransition(async () => {
       const result = await saveCategoryAction(form);
       if (result.error) {
@@ -372,15 +365,6 @@ export default function CategoriesManager({
               />
             </div>
           ) : null}
-          <label>
-            <span className="admin-label">{t("sortOrder")}</span>
-            <input
-              className="admin-input"
-              type="number"
-              value={editor.sortOrder}
-              onChange={(event) => setEditor({ ...editor, sortOrder: Number(event.target.value || 0) })}
-            />
-          </label>
         </AdminModal>
       ) : null}
 
