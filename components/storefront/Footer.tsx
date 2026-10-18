@@ -82,6 +82,12 @@ export default function Footer() {
             <Link href="/terms" className="footer-legal-link">{t("termsLink")}</Link>
           </div>
         </div>
+        <p className="footer-credit">
+          {t("broughtToLifeBy")}{" "}
+          <a href="https://qwebdigital.com/" target="_blank" rel="noopener noreferrer">
+            Qweb Digital
+          </a>
+        </p>
       </div>
     </footer>
   );

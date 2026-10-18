@@ -139,6 +139,7 @@ export const ar: typeof en = {
   privacyLink: "سياسة الخصوصية",
   termsLink: "شروط الخدمة",
   copyright: "© {year} {brand}. جميع الحقوق محفوظة. الأسعار بـ {currency}.",
+  broughtToLifeBy: "من إبداع",
   pageNotFound: "الصفحة غير موجودة",
   pageNotFoundSub: "الصفحة التي تبحث عنها غير موجودة.",
   backHome: "العودة للرئيسية",

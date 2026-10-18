@@ -137,6 +137,7 @@ export const en = {
   privacyLink: "Privacy Policy",
   termsLink: "Terms of Service",
   copyright: "© {year} {brand}. All rights reserved. Prices in {currency}.",
+  broughtToLifeBy: "Brought to life by",
   pageNotFound: "PAGE NOT FOUND",
   pageNotFoundSub: "The page you're looking for doesn't exist.",
   backHome: "Back to Home",
